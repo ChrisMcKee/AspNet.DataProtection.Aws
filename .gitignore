@@ -243,3 +243,4 @@ cov-int/
 
 # Cake
 tools/
+/.idea/

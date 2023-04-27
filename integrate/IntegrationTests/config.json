@@ -1,0 +1,38 @@
+{
+  "s3XmlStorageFull": {
+    "bucket": "1234",
+    "keyPrefix": "key",
+    "serverSideEncryptionMethod": "AWSKMS",
+    "serverSideEncryptionCustomerMethod": "AES256",
+    "serverSideEncryptionCustomerProvidedKey": "provKey",
+    "serverSideEncryptionCustomerProvidedKeyMd5": "provKeyMd5",
+    "serverSideEncryptionKeyManagementServiceKeyId": "servKeyId",
+    "storageClass": "Glacier",
+    "clientSideCompression": false,
+    "maxS3QueryConcurrency": 7,
+    "validateETag": true,
+    "ValidateMd5Metadata":  false
+  },
+  "kmsXmlEncryptionFull": {
+    "keyId": "key",
+    "encryptionContext": {
+      "someContext": "someContextValue"
+    },
+    "grantTokens": [
+      "someToken"
+    ],
+    "discriminatorAsContext": false,
+    "hashDiscriminatorContext": false
+  },
+  "s3ExplicitAwsTestCase": {
+    "bucket": "dataprotection-s3-integration-tests",
+    "keyPrefix": "RealXmlKeyManager2/"
+  },
+  "s3ImplicitAwsTestCase": {
+    "bucket": "dataprotection-s3-integration-tests",
+    "keyPrefix": "RealXmlKeyManager3/"
+  },
+  "kmsTestCase": {
+    "keyId": "alias/KmsIntegrationTesting"
+  }
+}

@@ -1,0 +1,62 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Description>ASP.NET DataProtection repository for use with AWS S3</Description>
+        <VersionPrefix>3.0.1</VersionPrefix>
+        <Authors>chris mckee,hotchkj</Authors>
+        <TargetFrameworks>netstandard2.0;net6.0</TargetFrameworks>
+        <OutputType>Library</OutputType>
+        <PackageId>AspNet.DataProtection.Aws.S3</PackageId>
+        <PackageTags>ASP.NET;AWS;DataProtection;netcore</PackageTags>
+        <PackageReleaseNotes>Supports ASP.NET Framework 4.8 and .net 6+
+            Allows configuration via ASP.NET Configuration Binding
+            Integrates with DataProtection Application Discriminator
+            PDBs now embedded &amp; source linked
+            Semantic versioning included in dependencies, restricted to minimums only
+        </PackageReleaseNotes>
+        <PackageProjectUrl>https://github.com/chrismckee/AspNet.DataProtection.Aws</PackageProjectUrl>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <RepositoryType>git</RepositoryType>
+        <RepositoryUrl>https://github.com/chrismckee/AspNet.DataProtection.Aws</RepositoryUrl>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <!-- Disable analyzer warning since AWS SDK has incorrect versioning behaviour -->
+        <!-- 1701;1702;1705 are Microsoft advice - cargo culting -->
+        <NoWarn>1701;1702;1705;IDE1002</NoWarn>
+        <DebugSymbols>true</DebugSymbols>
+        <DebugType>Embedded</DebugType>
+        <RootNamespace>AspNetCore.DataProtection.Aws.S3</RootNamespace>
+        <SignAssembly>true</SignAssembly>
+        <AssemblyOriginatorKeyFile>..\aspnetdpa.snk</AssemblyOriginatorKeyFile>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <WarningsAsErrors />
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <WarningsAsErrors />
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="all" />
+        <PackageReference Include="AWSSDK.S3" Version="3.7.104.5" />
+    </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' != 'net6.0'">
+    <PackageReference Include="Microsoft.AspNetCore" Version="[2.2.0,)" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="7.0.5" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\aspnetdpa.snk">
+      <Link>aspnetdpa.snk</Link>
+    </None>
+  </ItemGroup>
+
+</Project>

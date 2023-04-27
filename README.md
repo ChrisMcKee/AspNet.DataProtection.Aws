@@ -1,6 +1,6 @@
-# AspNetCore.DataProtection.Aws
+# AspNet.DataProtection.Aws
 
-**DEPRECATED**
+**AWS Alternative**
 
 AWS now actively maintain their own [implementation](https://github.com/aws/aws-ssm-data-protection-provider-for-aspnet) of this functionality.
 Consumers are encouraged to switch over to this.
@@ -10,18 +10,13 @@ Consumers are encouraged to switch over to this.
 Amazon Web Services integration for ASP.NET Core data protection.
 Server keys can be stored in S3 and/or key material encrypted using KMS using:
 
-- `AspNetCore.DataProtection.Aws.S3` - S3 encryption key storage
-- `AspNetCore.DataProtection.Aws.Kms` - KMS encryption key protection
-
-[![Build status](https://ci.appveyor.com/api/projects/status/5k00d5fdfspjv20e/branch/master?svg=true)](https://ci.appveyor.com/project/hotchkj/aspnetcore-dataprotection-aws/branch/master)
-[![SonarQube Status](https://sonarcloud.io/api/project_badges/measure?project=AspNetCore.DataProtection.Aws&metric=alert_status)](https://sonarcloud.io/dashboard?id=AspNetCore.DataProtection.Aws)
+- `AspNet.DataProtection.Aws.S3` - S3 encryption key storage
+- `AspNet.DataProtection.Aws.Kms` - KMS encryption key protection
+[LICENSE.md](LICENSE.md)
 
 This code is open source under the MIT license and not affiliated with Microsoft, Amazon, or any other organisation.
 
 ## S3 Persistence
-
-[![Nuget](https://img.shields.io/nuget/v/AspNetCore.DataProtection.Aws.S3.svg)](https://www.nuget.org/packages/AspNetCore.DataProtection.Aws.S3)
-![Downloads](https://img.shields.io/nuget/dt/AspNetCore.DataProtection.Aws.S3.svg)
 
 By default, ASP.NET Core Data Protection stores encryption keys locally, causing issues with key mismatches across server farms. S3 can be used to provide XML key file storage instead of a shared
 filesystem.
@@ -95,9 +90,6 @@ If you're using Infrastructure as Code, like CloudFormation, or Terraform, you w
 
 ## KMS Cryptography
 
-[![Nuget](https://img.shields.io/nuget/v/AspNetCore.DataProtection.Aws.Kms.svg)](https://www.nuget.org/packages/AspNetCore.DataProtection.Aws.Kms)
-![Downloads](https://img.shields.io/nuget/dt/AspNetCore.DataProtection.Aws.Kms.svg)
-
 Default options for ASP.NET data encryption are bound to certificates or Windows-specific DPAPI constructs. AWS Key Management Service
 keys can be used instead to provide a consistent master key for protecting the temporary server key material itself while stored within the XML files.
 
@@ -144,7 +136,7 @@ public void ConfigureServices(IServiceCollection services)
 ```
 KMS key ID _must_ be specified. If the `IAmazonKeyManagementService` interface is discoverable via Dependency Injection in `IServiceCollection`, the constructor argument of `AmazonKeyManagementServiceClient` can be omitted.
 
-_Migration Note:_ The `1.0` release of `AspNetCore.DataProtection.Aws.Kms` had `KmsXmlEncryptorConfig` take the application name as an argument, which was then used
+_Migration Note:_ The `1.0` release of `AspNet.DataProtection.Aws.Kms` had `KmsXmlEncryptorConfig` take the application name as an argument, which was then used
 to populate an encryption context. The Data Protection application discriminator is now used to provide this value as it fulfils a similar function - that of identifying and
 allowing/preventing cross-talk between applications.
 
@@ -156,8 +148,6 @@ created as a custom context with key of `KmsConstants.ApplicationEncryptionConte
 
 Prerequisites for building & testing:
 
-- NET Core SDK 3.1
-- NET Core SDK 2.2
-- NET Core SDK 1.1
+- NET SDK 6+
 
 Integration tests require AWS access, or modifying to access your own copy of AWS resources.
