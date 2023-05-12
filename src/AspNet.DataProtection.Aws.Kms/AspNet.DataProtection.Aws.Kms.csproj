@@ -2,31 +2,9 @@
 
   <PropertyGroup>
     <Description>ASP.NET DataProtection encrypter &amp; decrypter for use with AWS KMS</Description>
-    <!-- <VersionPrefix>3.0.1</VersionPrefix> -->
-    <Authors>chris mckee, hotchkj</Authors>
-    <TargetFrameworks>netstandard2.0;net6.0</TargetFrameworks>
-    <OutputType>Library</OutputType>
     <PackageId>AspNet.DataProtection.Aws.Kms</PackageId>
-    <PackageTags>ASP.NET;AWS;DataProtection;netcore</PackageTags>
-    <PackageReleaseNotes>Supports ASP.NET Framework 4.8 and .net 6+
-      Allows configuration via ASP.NET Configuration Binding
-      Integrates with DataProtection Application Discriminator
-      PDBs now embedded &amp; source linked
-      Semantic versioning included in dependencies, restricted to minimums only
-    </PackageReleaseNotes>
-    <PackageProjectUrl>https://github.com/chrismckee/AspNet.DataProtection.Aws</PackageProjectUrl>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/chrismckee/AspNet.DataProtection.Aws</RepositoryUrl>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <!-- Disable analyzer warning since AWS SDK has incorrect versioning behaviour -->
-    <!-- 1701;1702;1705 are Microsoft advice - cargo culting -->
-    <NoWarn>1701;1702;1705;IDE1002</NoWarn>
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>Embedded</DebugType>
     <RootNamespace>AspNetCore.DataProtection.Aws.Kms</RootNamespace>
-    <SignAssembly>true</SignAssembly>
-    <AssemblyOriginatorKeyFile>..\aspnetdpa.snk</AssemblyOriginatorKeyFile>
+    <PackageTags>ASP.NET;AWS;DataProtection;netcore,s3</PackageTags>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -40,22 +18,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="all" />
-    <PackageReference Include="AWSSDK.KeyManagementService" Version="3.7.101.95" />
+    <PackageReference Include="AWSSDK.KeyManagementService" Version="[3.7,)" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="[6.0,)" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' != 'net6.0'">
-    <PackageReference Include="Microsoft.AspNetCore" Version="[2.2.0,)" />
-    <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="7.0.5" />
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="[6.0,)" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
+  <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.0'">
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Include="..\aspnetdpa.snk">
-      <Link>aspnetdpa.snk</Link>
-    </None>
-  </ItemGroup>
 </Project>

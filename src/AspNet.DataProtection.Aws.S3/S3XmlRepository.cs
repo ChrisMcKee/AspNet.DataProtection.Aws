@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,7 +17,6 @@ using AspNetCore.DataProtection.Aws.S3.Internals;
 using Microsoft.AspNetCore.DataProtection.Repositories;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Net.Http.Headers;
 
 namespace AspNetCore.DataProtection.Aws.S3
 {
@@ -133,11 +133,9 @@ namespace AspNetCore.DataProtection.Aws.S3
             do
             {
                 response = await s3Client.ListObjectsV2Async(new ListObjectsV2Request
-                {
-                    BucketName = Config.Bucket,
-                    Prefix = Config.KeyPrefix,
-                    ContinuationToken = response?.NextContinuationToken
-                },
+                                                             {
+                                                                 BucketName = Config.Bucket, Prefix = Config.KeyPrefix, ContinuationToken = response?.NextContinuationToken
+                                                             },
                                                              ct)
                                          .ConfigureAwait(false);
 

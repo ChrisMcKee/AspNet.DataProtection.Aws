@@ -130,27 +130,26 @@ namespace AspNetCore.DataProtection.Aws.Kms
                                                                         Func<IServiceProvider, IOptions<KmsXmlEncryptorConfig>> getOptions)
         {
             builder.Services.AddOptions();
-            builder.Services.AddSingleton<IConfigureOptions<KeyManagementOptions>>(serviceProvider =>
-                                                                                   {
-                                                                                       var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
-                                                                                       if(kmsClient == null)
-                                                                                       {
-                                                                                           kmsClient = serviceProvider.GetRequiredService<IAmazonKeyManagementService>();
-                                                                                       }
+            builder.Services.TryAddSingleton<IConfigureOptions<KeyManagementOptions>>(serviceProvider =>
+                                                                                      {
+                                                                                          var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
 
-                                                                                       var boundOptions = getOptions(serviceProvider);
-                                                                                       var dpOptions = serviceProvider.GetRequiredService<IOptions<DataProtectionOptions>>();
-                                                                                       return new ConfigureOptions<KeyManagementOptions>(options =>
-                                                                                       {
-                                                                                           options.XmlEncryptor =
-                                                                                               loggerFactory != null
-                                                                                                   ? new KmsXmlEncryptor(kmsClient,
-                                                                                                       boundOptions,
-                                                                                                       dpOptions,
-                                                                                                       loggerFactory.CreateLogger<KmsXmlEncryptor>())
-                                                                                                   : new KmsXmlEncryptor(kmsClient, boundOptions, dpOptions);
-                                                                                       });
-                                                                                   });
+                                                                                          kmsClient ??= serviceProvider.GetRequiredService<IAmazonKeyManagementService>();
+
+                                                                                          var boundOptions = getOptions(serviceProvider);
+                                                                                          var dpOptions = serviceProvider.GetRequiredService<IOptions<DataProtectionOptions>>();
+
+                                                                                          return new ConfigureOptions<KeyManagementOptions>(options =>
+                                                                                          {
+                                                                                              options.XmlEncryptor =
+                                                                                                  loggerFactory != null
+                                                                                                      ? new KmsXmlEncryptor(kmsClient,
+                                                                                                          boundOptions,
+                                                                                                          dpOptions,
+                                                                                                          loggerFactory.CreateLogger<KmsXmlEncryptor>())
+                                                                                                      : new KmsXmlEncryptor(kmsClient, boundOptions, dpOptions);
+                                                                                          });
+                                                                                      });
 
             // Need to ensure KmsXmlDecryptor can actually be constructed
             if(kmsClient != null)

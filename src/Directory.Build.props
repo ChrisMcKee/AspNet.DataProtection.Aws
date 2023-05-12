@@ -1,0 +1,53 @@
+<Project>
+
+  <PropertyGroup>
+    <DebugType>portable</DebugType>
+    <LangVersion>11</LangVersion>
+
+    <VersionPrefix>3.0.2</VersionPrefix>
+    <Authors>chris mckee,hotchkj</Authors>
+    <TargetFrameworks>netstandard2.0;net6.0</TargetFrameworks>
+    <OutputType>Library</OutputType>
+    <PackageProjectUrl>https://github.com/chrismckee/AspNet.DataProtection.Aws</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/chrismckee/AspNet.DataProtection.Aws</RepositoryUrl>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Disable analyzer warning since AWS SDK has incorrect versioning behaviour -->
+    <!-- 1701;1702;1705 are Microsoft advice - cargo culting -->
+    <NoWarn>1701;1702;1705;IDE1002</NoWarn>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>Embedded</DebugType>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\aspnetdpa.snk</AssemblyOriginatorKeyFile>
+
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <IncludeSource>true</IncludeSource>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <Deterministic>true</Deterministic>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
+
+    <!-- https://aka.ms/vs-build-acceleration -->
+    <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
+
+<!--    &lt;!&ndash; This avoids needing to have .NET targeting packs installed (e.g. for .NET 3.5) &ndash;&gt;-->
+<!--    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />-->
+  </ItemGroup>
+
+  <!-- Analyzers -->
+  <PropertyGroup>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

@@ -119,9 +119,9 @@ namespace AspNetCore.DataProtection.Aws.Tests
         [Fact]
         public void EnsureContextsAreUnaltered()
         {
-            Assert.Equal("AspNet.DataProtection.Aws.Kms.Xml", KmsConstants.DefaultEncryptionContextKey);
+            Assert.Equal("AspNetCore.DataProtection.Aws.Kms.Xml", KmsConstants.DefaultEncryptionContextKey);
             Assert.Equal("b7b7f5af-d3c3-436d-8792-87dfd65e1cd4", KmsConstants.DefaultEncryptionContextValue);
-            Assert.Equal("AspNet.DataProtection.Aws.Kms.Xml.ApplicationName", KmsConstants.ApplicationEncryptionContextKey);
+            Assert.Equal("AspNetCore.DataProtection.Aws.Kms.Xml.ApplicationName", KmsConstants.ApplicationEncryptionContextKey);
         }
     }
 }
