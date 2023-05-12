@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -30,7 +31,7 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
         public KmsDataProtectionBuilderExtensionsTests()
         {
-            repository = new MockRepository(MockBehavior.Default);
+            repository = new MockRepository(MockBehavior.Strict);
             builder = repository.Create<IDataProtectionBuilder>();
             client = repository.Create<IAmazonKeyManagementService>();
             svcCollection = repository.Create<IServiceCollection>();
@@ -52,12 +53,12 @@ namespace AspNetCore.DataProtection.Aws.Tests
         [InlineData(false)]
         public void ExpectBuilderAdditions(bool withClient)
         {
-            var services = new List<ServiceDescriptor>();
-
+            IServiceCollection services = new ServiceCollection();
             builder.Setup(x => x.Services).Returns(svcCollection.Object);
             svcCollection.Setup(x => x.GetEnumerator()).Returns(() => services.GetEnumerator());
             svcCollection.Setup(x => x.Add(It.IsAny<ServiceDescriptor>()))
-                         .Callback<ServiceDescriptor>(sd => { services.Add(sd); });
+                         .Callback<ServiceDescriptor>(sd => { services.TryAdd(sd); });
+            svcCollection.Setup(x => x.Count).Returns(services.Count);
 
             var config = new KmsXmlEncryptorConfig("keyId");
 
@@ -71,18 +72,21 @@ namespace AspNetCore.DataProtection.Aws.Tests
             {
                 builder.Object.ProtectKeysWithAwsKms(config);
                 builder.Object.ProtectKeysWithAwsKms(config);
+
+                // We haven't passed in an aws key-management service and we don't have one registered for it to pick up at registration.
+                Assert.Equal(0, services.Count(x => x.ServiceType == typeof(IAmazonKeyManagementService)));
             }
 
             Assert.Equal(withClient ? 1 : 0, services.Count(x => x.ServiceType == typeof(IAmazonKeyManagementService)));
 
-            // IConfigureOptions is designed & expected to be present multiple times, so expect two after two calls
-            Assert.Equal(2, services.Count(x => x.ServiceType == typeof(IConfigureOptions<KeyManagementOptions>)));
-            Assert.Equal(2, services.Count(x => x.ServiceType == typeof(IConfigureOptions<KmsXmlEncryptorConfig>)));
+            Assert.Equal(1, services.Count(x => x.ServiceType == typeof(IConfigureOptions<KeyManagementOptions>)));
+            Assert.Equal(1, services.Count(x => x.ServiceType == typeof(IConfigureOptions<KmsXmlEncryptorConfig>)));
 
-            Assert.Equal(ServiceLifetime.Singleton, services.First(x => x.ServiceType == typeof(IConfigureOptions<KeyManagementOptions>)).Lifetime);
-            Assert.Equal(ServiceLifetime.Singleton, services.First(x => x.ServiceType == typeof(IConfigureOptions<KmsXmlEncryptorConfig>)).Lifetime);
+            Assert.Equal(ServiceLifetime.Singleton, services.Single(x => x.ServiceType == typeof(IConfigureOptions<KeyManagementOptions>)).Lifetime);
+            Assert.Equal(ServiceLifetime.Singleton, services.Single(x => x.ServiceType == typeof(IConfigureOptions<KmsXmlEncryptorConfig>)).Lifetime);
 
             provider.Setup(x => x.GetService(typeof(IAmazonKeyManagementService))).Returns(client.Object);
+
             if(withClient)
             {
                 Assert.Equal(ServiceLifetime.Singleton, services.Single(x => x.ServiceType == typeof(IAmazonKeyManagementService)).Lifetime);
@@ -92,7 +96,7 @@ namespace AspNetCore.DataProtection.Aws.Tests
             // Ensure we run equivalent config for the actual configuration object
             var configureObject = services.First(x => x.ServiceType == typeof(IConfigureOptions<KmsXmlEncryptorConfig>)).ImplementationInstance;
             var optionsObject = new KmsXmlEncryptorConfig();
-            ((IConfigureOptions<KmsXmlEncryptorConfig>)configureObject).Configure(optionsObject);
+            ((IConfigureOptions<KmsXmlEncryptorConfig>)configureObject)?.Configure(optionsObject);
 
             provider.Setup(x => x.GetService(typeof(ILoggerFactory))).Returns(loggerFactory.Object);
             provider.Setup(x => x.GetService(typeof(IOptions<KmsXmlEncryptorConfig>))).Returns(snapshot.Object);
@@ -113,12 +117,12 @@ namespace AspNetCore.DataProtection.Aws.Tests
         [InlineData(false)]
         public void ExpectBuilderAdditionsConfig(bool withClient)
         {
-            var services = new List<ServiceDescriptor>();
-
+            IServiceCollection services = new ServiceCollection();
             builder.Setup(x => x.Services).Returns(svcCollection.Object);
             svcCollection.Setup(x => x.GetEnumerator()).Returns(() => services.GetEnumerator());
             svcCollection.Setup(x => x.Add(It.IsAny<ServiceDescriptor>()))
-                         .Callback<ServiceDescriptor>(sd => { services.Add(sd); });
+                         .Callback<ServiceDescriptor>(sd => { services.TryAdd(sd); });
+            svcCollection.Setup(x => x.Count).Returns(services.Count);
 
             // An empty collection seems to be enough to run what is eventually ConfigurationBinder.Bind, since there is no way to mock the options configure call
             // ReSharper disable once CollectionNeverUpdated.Local
@@ -140,12 +144,11 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
             Assert.Equal(withClient ? 1 : 0, services.Count(x => x.ServiceType == typeof(IAmazonKeyManagementService)));
 
-            // IConfigureOptions is designed & expected to be present multiple times, so expect two after two calls
-            Assert.Equal(2, services.Count(x => x.ServiceType == typeof(IConfigureOptions<KeyManagementOptions>)));
-            Assert.Equal(2, services.Count(x => x.ServiceType == typeof(IConfigureOptions<KmsXmlEncryptorConfig>)));
+            Assert.Equal(1, services.Count(x => x.ServiceType == typeof(IConfigureOptions<KeyManagementOptions>)));
+            Assert.Equal(1, services.Count(x => x.ServiceType == typeof(IConfigureOptions<KmsXmlEncryptorConfig>)));
 
-            Assert.Equal(ServiceLifetime.Singleton, services.First(x => x.ServiceType == typeof(IConfigureOptions<KeyManagementOptions>)).Lifetime);
-            Assert.Equal(ServiceLifetime.Singleton, services.First(x => x.ServiceType == typeof(IConfigureOptions<KmsXmlEncryptorConfig>)).Lifetime);
+            Assert.Equal(ServiceLifetime.Singleton, services.Single(x => x.ServiceType == typeof(IConfigureOptions<KeyManagementOptions>)).Lifetime);
+            Assert.Equal(ServiceLifetime.Singleton, services.Single(x => x.ServiceType == typeof(IConfigureOptions<KmsXmlEncryptorConfig>)).Lifetime);
 
             provider.Setup(x => x.GetService(typeof(IAmazonKeyManagementService))).Returns(client.Object);
             if(withClient)

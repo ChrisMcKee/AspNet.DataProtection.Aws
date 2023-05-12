@@ -134,10 +134,10 @@ namespace AspNetCore.DataProtection.Aws.Kms
                                                                                       {
                                                                                           var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
 
-                                                                                          kmsClient ??= serviceProvider.GetRequiredService<IAmazonKeyManagementService>();
-
                                                                                           var boundOptions = getOptions(serviceProvider);
                                                                                           var dpOptions = serviceProvider.GetRequiredService<IOptions<DataProtectionOptions>>();
+
+                                                                                          kmsClient ??= serviceProvider.GetRequiredService<IAmazonKeyManagementService>();
 
                                                                                           return new ConfigureOptions<KeyManagementOptions>(options =>
                                                                                           {

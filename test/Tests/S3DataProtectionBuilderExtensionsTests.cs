@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -51,12 +52,12 @@ namespace AspNetCore.DataProtection.Aws.Tests
         [InlineData(false)]
         public void ExpectBuilderAdditionsRaw(bool withClient)
         {
-            var services = new List<ServiceDescriptor>();
-
+            IServiceCollection services = new ServiceCollection();
             builder.Setup(x => x.Services).Returns(svcCollection.Object);
             svcCollection.Setup(x => x.GetEnumerator()).Returns(() => services.GetEnumerator());
             svcCollection.Setup(x => x.Add(It.IsAny<ServiceDescriptor>()))
-                         .Callback<ServiceDescriptor>(sd => { services.Add(sd); });
+                         .Callback<ServiceDescriptor>(sd => { services.TryAdd(sd); });
+            svcCollection.Setup(x => x.Count).Returns(services.Count);
 
             var config = new S3XmlRepositoryConfig("bucket");
 
@@ -73,11 +74,11 @@ namespace AspNetCore.DataProtection.Aws.Tests
                 provider.Setup(x => x.GetService(typeof(IAmazonS3))).Returns(client.Object);
             }
 
-            Assert.Equal(1, services.Count(x => x.ServiceType == typeof(IMockingWrapper)));
+            Assert.Equal(1, services.Distinct().Count(x => x.ServiceType == typeof(IMockingWrapper)));
 
-            // IConfigureOptions is designed & expected to be present multiple times, so expect two after two calls
-            Assert.Equal(2, services.Count(x => x.ServiceType == typeof(IConfigureOptions<KeyManagementOptions>)));
-            Assert.Equal(2, services.Count(x => x.ServiceType == typeof(IConfigureOptions<S3XmlRepositoryConfig>)));
+            // Behaviour of TryAdd stops duplicates
+            Assert.Equal(1, services.Count(x => x.ServiceType == typeof(IConfigureOptions<KeyManagementOptions>)));
+            Assert.Equal(1, services.Count(x => x.ServiceType == typeof(IConfigureOptions<S3XmlRepositoryConfig>)));
 
             Assert.Equal(ServiceLifetime.Singleton, services.Single(x => x.ServiceType == typeof(IMockingWrapper)).Lifetime);
             Assert.Equal(ServiceLifetime.Singleton, services.First(x => x.ServiceType == typeof(IConfigureOptions<KeyManagementOptions>)).Lifetime);
@@ -104,12 +105,12 @@ namespace AspNetCore.DataProtection.Aws.Tests
         [InlineData(false)]
         public void ExpectBuilderAdditionsConfig(bool withClient)
         {
-            var services = new List<ServiceDescriptor>();
-
+            IServiceCollection services = new ServiceCollection();
             builder.Setup(x => x.Services).Returns(svcCollection.Object);
             svcCollection.Setup(x => x.GetEnumerator()).Returns(() => services.GetEnumerator());
             svcCollection.Setup(x => x.Add(It.IsAny<ServiceDescriptor>()))
-                         .Callback<ServiceDescriptor>(sd => { services.Add(sd); });
+                         .Callback<ServiceDescriptor>(sd => { services.TryAdd(sd); });
+            svcCollection.Setup(x => x.Count).Returns(services.Count);
 
             // An empty collection seems to be enough to run what is eventually ConfigurationBinder.Bind, since there is no way to mock the options configure call
             // ReSharper disable once CollectionNeverUpdated.Local
@@ -132,9 +133,9 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
             Assert.Equal(1, services.Count(x => x.ServiceType == typeof(IMockingWrapper)));
 
-            // IConfigureOptions is designed & expected to be present multiple times, so expect two after two calls
-            Assert.Equal(2, services.Count(x => x.ServiceType == typeof(IConfigureOptions<KeyManagementOptions>)));
-            Assert.Equal(2, services.Count(x => x.ServiceType == typeof(IConfigureOptions<S3XmlRepositoryConfig>)));
+            // Behaviour of TryAdd stops duplicates
+            Assert.Equal(1, services.Count(x => x.ServiceType == typeof(IConfigureOptions<KeyManagementOptions>)));
+            Assert.Equal(1, services.Count(x => x.ServiceType == typeof(IConfigureOptions<S3XmlRepositoryConfig>)));
 
             Assert.Equal(ServiceLifetime.Singleton, services.Single(x => x.ServiceType == typeof(IMockingWrapper)).Lifetime);
             Assert.Equal(ServiceLifetime.Singleton, services.First(x => x.ServiceType == typeof(IConfigureOptions<KeyManagementOptions>)).Lifetime);
