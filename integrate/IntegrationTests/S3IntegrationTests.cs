@@ -34,6 +34,10 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
                 ServiceURL = "http://localhost:4566",
                 ForcePathStyle = true,
             });
+
+            try { s3Client.PutBucketAsync(BucketName); }
+            catch {}
+
             // Override the default for ease of debugging. Explicitly turn on for compression tests.
             config = new S3XmlRepositoryConfig(BucketName) { ClientSideCompression = false };
             xmlRepo = new S3XmlRepository(s3Client, new DirectOptions<S3XmlRepositoryConfig>(config));
