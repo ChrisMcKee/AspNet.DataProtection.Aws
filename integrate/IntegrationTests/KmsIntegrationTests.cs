@@ -34,7 +34,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
                                                              new AmazonKeyManagementServiceConfig()
                                                              {
                                                                  UseHttp = true,
-                                                                 ServiceURL = "http://localhost:4566",
+                                                                 ServiceURL = "https://localhost:4566",
                                                              });
             var encryptConfig = new KmsXmlEncryptorConfig(KmsTestingKey);
             dpOptions = new DataProtectionOptions { ApplicationDiscriminator = ApplicationName };

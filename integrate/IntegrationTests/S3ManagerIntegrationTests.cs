@@ -30,7 +30,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
             s3Client = new AmazonS3Client(new AmazonS3Config
             {
                 UseHttp = true,
-                ServiceURL = "http://localhost:4566",
+                ServiceURL = "https://localhost:4566",
                 ForcePathStyle = true,
             });
             s3Cleanup = new CleanupS3(s3Client);

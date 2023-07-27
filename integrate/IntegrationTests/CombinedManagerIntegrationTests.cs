@@ -30,14 +30,14 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
             s3Client = new AmazonS3Client(new AmazonS3Config
             {
                 UseHttp = true,
-                ServiceURL = "http://localhost:4566",
+                ServiceURL = "https://localhost:4566",
                 ForcePathStyle = true,
             });
             s3Client.EnsureBucketExistsAsync(S3IntegrationTests.BucketName);
             kmsClient = new AmazonKeyManagementServiceClient(new AmazonKeyManagementServiceConfig
             {
                 UseHttp = true,
-                ServiceURL = "http://localhost:4566",
+                ServiceURL = "https://localhost:4566",
             });
             s3Cleanup = new CleanupS3(s3Client);
         }
