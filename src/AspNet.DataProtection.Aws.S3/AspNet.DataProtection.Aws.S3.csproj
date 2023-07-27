@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <Description>ASP.NET DataProtection repository for use with AWS S3</Description>
-    <PackageId>AspNet.DataProtection.Aws.S3</PackageId>
+    <PackageId>AspNetCore.DataProtection.Aws.S3</PackageId>
     <RootNamespace>AspNetCore.DataProtection.Aws.S3</RootNamespace>
     <PackageTags>ASP.NET;AWS;DataProtection;netcore</PackageTags>
     <PackageReleaseNotes>Supports ASP.NET Framework 4.8 and .net 6+
