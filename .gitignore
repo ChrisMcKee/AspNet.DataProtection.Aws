@@ -244,3 +244,4 @@ cov-int/
 # Cake
 tools/
 /.idea/
+/artifact/*
