@@ -2,8 +2,7 @@
 
 **AWS Alternative**
 
-AWS now actively maintain their own [implementation](https://github.com/aws/aws-ssm-data-protection-provider-for-aspnet) of this functionality.
-Consumers are encouraged to switch over to this.
+AWS now actively maintain their own style/[implementation](https://github.com/aws/aws-ssm-data-protection-provider-for-aspnet) of this functionality using SSM.
 
 ## Archived Instructions
 
