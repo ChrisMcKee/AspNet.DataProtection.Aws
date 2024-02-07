@@ -74,7 +74,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
 
             IReadOnlyCollection<XElement> list = await xmlRepo.GetAllElementsAsync(CancellationToken.None);
 
-            Assert.Equal(1, list.Count);
+            Assert.Single(list);
             Assert.True(XNode.DeepEquals(myXml, list.First()));
         }
 
@@ -92,7 +92,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
 
             IReadOnlyCollection<XElement> list = await xmlRepo.GetAllElementsAsync(CancellationToken.None);
 
-            Assert.Equal(1, list.Count);
+            Assert.Single(list);
             Assert.True(XNode.DeepEquals(myXml, list.First()));
         }
 
@@ -110,7 +110,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
 
             IReadOnlyCollection<XElement> list = await xmlRepo.GetAllElementsAsync(CancellationToken.None);
 
-            Assert.Equal(1, list.Count);
+            Assert.Single(list);
             Assert.True(XNode.DeepEquals(myXml, list.First()));
         }
 
@@ -128,7 +128,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
 
             IReadOnlyCollection<XElement> list = await xmlRepo.GetAllElementsAsync(CancellationToken.None);
 
-            Assert.Equal(1, list.Count);
+            Assert.Single(list);
             Assert.True(XNode.DeepEquals(myXml, list.First()));
         }
 
@@ -154,7 +154,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
 
             IReadOnlyCollection<XElement> list = await xmlRepo.GetAllElementsAsync(CancellationToken.None);
 
-            Assert.Equal(1, list.Count);
+            Assert.Single(list);
             Assert.True(XNode.DeepEquals(myXml, list.First()));
         }
 
@@ -174,7 +174,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
 
             IReadOnlyCollection<XElement> list = await xmlRepo.GetAllElementsAsync(CancellationToken.None);
 
-            Assert.Equal(1, list.Count);
+            Assert.Single(list);
             Assert.True(XNode.DeepEquals(myXml, list.First()));
         }
 
@@ -194,7 +194,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
 
             IReadOnlyCollection<XElement> list = await xmlRepo.GetAllElementsAsync(CancellationToken.None);
 
-            Assert.Equal(1, list.Count);
+            Assert.Single(list);
             Assert.True(XNode.DeepEquals(myXml, list.First()));
         }
 
@@ -213,7 +213,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
 
             IReadOnlyCollection<XElement> list = await xmlRepo.GetAllElementsAsync(CancellationToken.None);
 
-            Assert.Equal(1, list.Count);
+            Assert.Single(list);
             Assert.True(XNode.DeepEquals(myXml, list.First()));
         }
 
@@ -232,7 +232,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
 
             IReadOnlyCollection<XElement> list = await xmlRepo.GetAllElementsAsync(CancellationToken.None);
 
-            Assert.Equal(1, list.Count);
+            Assert.Single(list);
             Assert.True(XNode.DeepEquals(myXml, list.First()));
         }
 
@@ -243,7 +243,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
 
             IReadOnlyCollection<XElement> list = await xmlRepo.GetAllElementsAsync(CancellationToken.None);
 
-            Assert.Equal(0, list.Count);
+            Assert.Empty(list);
         }
 
         [Fact]
@@ -253,7 +253,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
 
             IReadOnlyCollection<XElement> list = await xmlRepo.GetAllElementsAsync(CancellationToken.None);
 
-            Assert.Equal(0, list.Count);
+            Assert.Empty(list);
         }
 
         [Fact]

@@ -78,7 +78,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
 
             dpOptions.ApplicationDiscriminator = "wrong";
 
-            var result = decryptor.DecryptAsync(encrypted.EncryptedElement, CancellationToken.None).Result;
+            var result = await decryptor.DecryptAsync(encrypted.EncryptedElement, CancellationToken.None);
 
             await Assert.ThrowsAsync<InvalidCiphertextException>(
                 async () => await decryptor.DecryptAsync(encrypted.EncryptedElement, CancellationToken.None));

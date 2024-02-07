@@ -57,7 +57,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
 
                 IReadOnlyCollection<IKey> keys = keyManager.GetAllKeys();
 
-                Assert.Equal(1, keys.Count);
+                Assert.Single(keys);
                 Assert.Equal(activationDate, keys.Single().ActivationDate);
                 Assert.Equal(expirationDate, keys.Single().ExpirationDate);
                 Assert.NotNull(keys.Single().Descriptor);
@@ -87,7 +87,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
 
                 IReadOnlyCollection<IKey> keys = keyManager.GetAllKeys();
 
-                Assert.Equal(1, keys.Count);
+                Assert.Single(keys);
                 Assert.Equal(activationDate, keys.Single().ActivationDate);
                 Assert.Equal(expirationDate, keys.Single().ExpirationDate);
                 Assert.NotNull(keys.Single().Descriptor);
@@ -115,7 +115,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
 
                 IReadOnlyCollection<IKey> keys = keyManager.GetAllKeys();
 
-                Assert.Equal(1, keys.Count);
+                Assert.Single(keys);
                 Assert.Equal(activationDate, keys.Single().ActivationDate);
                 Assert.Equal(expirationDate, keys.Single().ExpirationDate);
                 Assert.NotNull(keys.Single().Descriptor);
@@ -146,7 +146,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
 
                 IReadOnlyCollection<IKey> keys = keyManager.GetAllKeys();
 
-                Assert.Equal(1, keys.Count);
+                Assert.Single(keys);
                 Assert.Equal(activationDate, keys.Single().ActivationDate);
                 Assert.Equal(expirationDate, keys.Single().ExpirationDate);
                 Assert.NotNull(keys.Single().Descriptor);

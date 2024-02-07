@@ -79,7 +79,7 @@ namespace AspNetCore.DataProtection.Aws.Kms
         {
             ValidateConfig();
 
-            logger?.LogDebug("Decrypting ciphertext DataProtection key using AWS key {0}", Config.KeyId);
+            logger?.LogDebug("Decrypting ciphertext DataProtection key using AWS key {KeyId}", Config.KeyId);
 
             using(var memoryStream = new MemoryStream())
             {

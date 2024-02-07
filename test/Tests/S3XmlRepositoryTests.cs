@@ -432,7 +432,7 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
             IReadOnlyCollection<XElement> list = xmlRepository.GetAllElements();
 
-            Assert.Equal(0, list.Count);
+            Assert.Empty(list);
         }
 
         [Theory]
@@ -502,7 +502,7 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
                 IReadOnlyCollection<XElement> list = xmlRepository.GetAllElements();
 
-                Assert.Equal(1, list.Count);
+                Assert.Single(list);
 
                 Assert.True(XNode.DeepEquals(myXml, list.First()));
             }
@@ -624,7 +624,7 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
                 IReadOnlyCollection<XElement> list = xmlRepository.GetAllElements();
 
-                Assert.Equal(0, list.Count);
+                Assert.Empty(list);
             }
         }
 
@@ -676,7 +676,7 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
                 IReadOnlyCollection<XElement> list = xmlRepository.GetAllElements();
 
-                Assert.Equal(1, list.Count);
+                Assert.Single(list);
 
                 Assert.True(XNode.DeepEquals(myXml, list.First()));
             }
@@ -740,7 +740,7 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
                 IReadOnlyCollection<XElement> list = xmlRepository.GetAllElements();
 
-                Assert.Equal(1, list.Count);
+                Assert.Single(list);
 
                 Assert.True(XNode.DeepEquals(myXml, list.First()));
             }
@@ -801,7 +801,7 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
                 IReadOnlyCollection<XElement> list = xmlRepository.GetAllElements();
 
-                Assert.Equal(1, list.Count);
+                Assert.Single(list);
 
                 Assert.True(XNode.DeepEquals(myXml, list.First()));
             }

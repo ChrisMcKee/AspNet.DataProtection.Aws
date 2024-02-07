@@ -147,6 +147,6 @@ created as a custom context with key of `KmsConstants.ApplicationEncryptionConte
 
 Prerequisites for building & testing:
 
-- NET SDK 6+
+- NET SDK 8+
 
 Integration tests require AWS access, or modifying to access your own copy of AWS resources.
