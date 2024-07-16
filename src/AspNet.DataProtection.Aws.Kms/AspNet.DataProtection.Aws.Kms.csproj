@@ -2,11 +2,22 @@
 
   <PropertyGroup>
     <Description>ASP.NET DataProtection encrypter &amp; decrypter for use with AWS KMS</Description>
-    <PackageId>AspNet.DataProtection.Aws.Kms</PackageId>
     <AssemblyName>AspNetCore.DataProtection.Aws.Kms</AssemblyName>
     <RootNamespace>AspNetCore.DataProtection.Aws.Kms</RootNamespace>
+
+    <PackageId>AspNet.DataProtection.Aws.Kms</PackageId>
     <PackageTags>ASP.NET;AWS;DataProtection;netcore,Kms</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReleaseNotes>Supports ASP.NET Framework 4.8 and .net 6+
+      Allows configuration via ASP.NET Configuration Binding
+    </PackageReleaseNotes>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\LICENSE.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

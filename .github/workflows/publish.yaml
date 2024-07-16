@@ -25,13 +25,15 @@ jobs:
   create_nuget:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Get all history to allow automatic versioning using MinVer
 
       # Install the .NET SDK indicated in the global.json file
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
 
       # Create the NuGet package in the folder from the environment variable NuGetDirectory
       - run: dotnet pack --configuration Release --output ${{ env.NuGetDirectory }}
@@ -50,7 +52,9 @@ jobs:
     steps:
       # Install the .NET SDK indicated in the global.json file
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
 
       # Download the NuGet package created in the previous job
       - uses: actions/download-artifact@v3
@@ -79,17 +83,21 @@ jobs:
           - 4566:4566
           - 4571:4571
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Start LocalStack
-        run: |
-          pip install awscli-local[ver1] # install LocalStack cli and awslocal
+        uses: LocalStack/setup-localstack@v0.2.0
+        with:
+          skip-startup: 'true'
+          install-awslocal: 'true'
       - name: Run some Tests against LocalStack
         run: |
           awslocal s3 mb s3://dataprotection-s3-integration-tests
           awslocal s3 ls
           echo "Test Execution complete!"
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
       - name: Run tests
         run: dotnet test --configuration debug
 
@@ -109,7 +117,9 @@ jobs:
 
       # Install the .NET SDK indicated in the global.json file
       - name: Setup .NET Core
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
 
       # Publish all NuGet packages to NuGet.org
       # Use --skip-duplicate to prevent errors if a package with the same version already exists.

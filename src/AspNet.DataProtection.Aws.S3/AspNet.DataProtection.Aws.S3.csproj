@@ -2,17 +2,23 @@
 
   <PropertyGroup>
     <Description>ASP.NET DataProtection repository for use with AWS S3</Description>
-    <PackageId>AspNet.DataProtection.Aws.S3</PackageId>
     <AssemblyName>AspNetCore.DataProtection.Aws.S3</AssemblyName>
     <RootNamespace>AspNetCore.DataProtection.Aws.S3</RootNamespace>
+
+    <PackageId>AspNet.DataProtection.Aws.S3</PackageId>
     <PackageTags>ASP.NET;AWS;DataProtection;netcore</PackageTags>
     <PackageReleaseNotes>Supports ASP.NET Framework 4.8 and .net 6+
       Allows configuration via ASP.NET Configuration Binding
       Integrates with DataProtection Application Discriminator
-      PDBs now embedded &amp; source linked
-      Semantic versioning included in dependencies, restricted to minimums only
     </PackageReleaseNotes>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\LICENSE.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
