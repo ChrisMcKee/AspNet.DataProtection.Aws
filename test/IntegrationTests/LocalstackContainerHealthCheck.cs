@@ -17,9 +17,9 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests;
 
 public class LocalstackContainerHealthCheck : IWaitUntil
 {
-    private readonly string _endpoint;
+    private readonly string? _endpoint;
 
-    public LocalstackContainerHealthCheck(string endpoint)
+    public LocalstackContainerHealthCheck(string? endpoint = null)
     {
         _endpoint = endpoint;
     }
@@ -38,7 +38,8 @@ public class LocalstackContainerHealthCheck : IWaitUntil
     public async Task<bool> UntilAsync(IContainer container)
     {
         // https://github.com/localstack/localstack/pull/6716
-        using var httpClient = new HttpClient { BaseAddress = new Uri(_endpoint) };
+        var endpoint = _endpoint ?? $"http://localhost:{container.GetMappedPublicPort(4566)}";
+        using var httpClient = new HttpClient { BaseAddress = new Uri(endpoint) };
         JsonNode? result;
         try
         {

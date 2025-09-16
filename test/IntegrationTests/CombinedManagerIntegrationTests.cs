@@ -19,29 +19,27 @@ using Xunit;
 
 namespace AspNetCore.DataProtection.Aws.IntegrationTests
 {
+    [Collection(nameof(LocalStackTestContainerCollection))]
     public sealed class CombinedManagerIntegrationTests : IDisposable
     {
         private readonly IAmazonS3 s3Client;
         private readonly IAmazonKeyManagementService kmsClient;
         private readonly ICleanupS3 s3Cleanup;
 
-        public CombinedManagerIntegrationTests()
+        public CombinedManagerIntegrationTests(LocalStackFixture containerInstance)
         {
-            Environment.SetEnvironmentVariable("AWS_ACCESS_KEY_ID", "xxx");
-            Environment.SetEnvironmentVariable("AWS_SECRET_ACCESS_KEY", "xxx");
-
-            // Expectation that local SDK has been configured correctly, whether via VS Tools or user config files
-            s3Client = new AmazonS3Client(new AmazonS3Config
+            // Use TestContainers LocalStack instance with dummy credentials
+            s3Client = new AmazonS3Client("test", "test", new AmazonS3Config
             {
                 UseHttp = true,
-                ServiceURL = "",
+                ServiceURL = containerInstance.ConnectionString,
                 ForcePathStyle = true,
             });
             s3Client.EnsureBucketExistsAsync(S3IntegrationTests.BucketName);
-            kmsClient = new AmazonKeyManagementServiceClient(new AmazonKeyManagementServiceConfig
+            kmsClient = new AmazonKeyManagementServiceClient("test", "test", new AmazonKeyManagementServiceConfig
             {
                 UseHttp = true,
-                ServiceURL = "",
+                ServiceURL = containerInstance.ConnectionString,
             });
             s3Cleanup = new CleanupS3(s3Client);
         }

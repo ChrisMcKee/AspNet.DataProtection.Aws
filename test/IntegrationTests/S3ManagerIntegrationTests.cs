@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.md in the project root for license information.
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
@@ -10,30 +11,37 @@ using AspNetCore.DataProtection.Aws.S3;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.Internal;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Testcontainers.LocalStack;
 using Xunit;
 
 namespace AspNetCore.DataProtection.Aws.IntegrationTests
 {
-    public sealed class S3ManagerIntegrationTests : IClassFixture<ConfigurationFixture>, IDisposable
+    [Collection(nameof(LocalStackTestContainerCollection))]
+    public sealed class S3ManagerIntegrationTests : IDisposable
     {
         private readonly IAmazonS3 s3Client;
         private readonly ICleanupS3 s3Cleanup;
-        private readonly ConfigurationFixture fixture;
+        private readonly IConfigurationRoot configuration;
 
-        public S3ManagerIntegrationTests(ConfigurationFixture fixture)
+        public S3ManagerIntegrationTests(LocalStackFixture containerInstance)
         {
-            this.fixture = fixture;
-
-            // Expectation that local SDK has been configured correctly, whether via VS Tools or user config files
-            s3Client = new AmazonS3Client(new AmazonS3Config
+            // Use TestContainers LocalStack instance with dummy credentials
+            s3Client = new AmazonS3Client("test", "test", new AmazonS3Config
             {
                 UseHttp = true,
-                ServiceURL = "https://localhost:4566",
+                ServiceURL = containerInstance.ConnectionString,
                 ForcePathStyle = true,
             });
             s3Cleanup = new CleanupS3(s3Client);
+            
+            // Load configuration from config.json
+            configuration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("config.json")
+                .Build();
         }
 
         public void Dispose()
@@ -71,7 +79,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
         [Fact]
         public async Task ExpectFullKeyManagerExplicitAwsStoreRetrieveWithConfigToSucceed()
         {
-            var section = fixture.Configuration.GetSection("s3ExplicitAwsTestCase");
+            var section = configuration.GetSection("s3ExplicitAwsTestCase");
 
             // Just make sure config is what is actually expected - of course normally you'd not access the config like this directly
             Assert.Equal(S3IntegrationTests.BucketName, section["bucket"]);
@@ -103,7 +111,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
         [Fact]
         public async Task ExpectFullKeyManagerStoreRetrieveWithConfigToSucceed()
         {
-            var section = fixture.Configuration.GetSection("s3ImplicitAwsTestCase");
+            var section = configuration.GetSection("s3ImplicitAwsTestCase");
 
             // Just make sure config is what is actually expected - of course normally you'd not access the config like this directly
             Assert.Equal(S3IntegrationTests.BucketName, section["bucket"]);

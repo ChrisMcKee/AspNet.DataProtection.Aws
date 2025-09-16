@@ -139,7 +139,10 @@ namespace AspNetCore.DataProtection.Aws.S3
                                                              ct)
                                          .ConfigureAwait(false);
 
-                items.AddRange(response.S3Objects);
+                if (response.S3Objects != null)
+                {
+                    items.AddRange(response.S3Objects);
+                }
             }
             while(response.IsTruncated != null && (bool)response.IsTruncated);
 

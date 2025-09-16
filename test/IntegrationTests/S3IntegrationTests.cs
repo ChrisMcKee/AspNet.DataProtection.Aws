@@ -12,6 +12,7 @@ using Xunit;
 
 namespace AspNetCore.DataProtection.Aws.IntegrationTests
 {
+    [Collection(nameof(LocalStackTestContainerCollection))]
     public sealed class S3IntegrationTests : IDisposable
     {
         private readonly IAmazonS3 s3Client;
@@ -25,13 +26,13 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
         // Sadly S3 bucket names are globally unique, so other testers without write access need to change this name
         internal const string BucketName = "dataprotection-s3-integration-tests";
 
-        public S3IntegrationTests()
+        public S3IntegrationTests(LocalStackFixture containerInstance)
         {
-            // Expectation that local SDK has been configured correctly, whether via VS Tools or user config files
-            s3Client = new AmazonS3Client(new AmazonS3Config
+            // Use TestContainers LocalStack instance with dummy credentials
+            s3Client = new AmazonS3Client("test", "test", new AmazonS3Config
             {
                 UseHttp = true,
-                ServiceURL = "https://localhost:4566",
+                ServiceURL = containerInstance.ConnectionString, // Use dynamic connection string
                 ForcePathStyle = true,
             });
 

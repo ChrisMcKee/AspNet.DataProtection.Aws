@@ -30,18 +30,20 @@ public sealed class LocalStackFixture : IAsyncLifetime
 
     public LocalStackFixture()
     {
-        // var localStackPort = new Random().Next(4000, 5000);
+        var containerName = $"aspnet-dpa-aws-localstack-{Guid.NewGuid():N}";
         _container = new LocalStackBuilder()
-                     .WithName("aspnet.dpa.aws.s3")
-                     .WithPortBinding(45666,4566)
-                     .WithCleanUp(false)
-                     // .WithPortBinding(4566, true)
+                     .WithImage("localstack/localstack:4")
+                     .WithName(containerName)
+                     .WithPortBinding(4566, true) // Use dynamic port allocation
+                     .WithCleanUp(true)
+                     .WithEnvironment("SERVICES", "s3,kms")
+                     .WithEnvironment("DEBUG", "1")
                      .WithWaitStrategy(Wait.ForUnixContainer()
-                                           //.UntilPortIsAvailable(4566)
-                                           //.AddCustomWaitStrategy(new LocalstackContainerHealthCheck($"http://localhost:{localStackPort}"))
+                                           .UntilInternalTcpPortIsAvailable(4566)
+                                           .AddCustomWaitStrategy(new LocalstackContainerHealthCheck())
                                       )
-                     // .WithBindMount(ToAbsolute("./localstack/aws-seed-data"), "/etc/localstack/init/ready.d", AccessMode.ReadOnly)
-                     // .WithBindMount(ToAbsolute("./localstack/aws-seed-data/scripts"), "/scripts", AccessMode.ReadOnly)
+                     .WithBindMount(ToAbsolute("./localstack/aws-seed-data"), "/etc/localstack/init/ready.d", AccessMode.ReadOnly)
+                     .WithBindMount(ToAbsolute("./localstack/aws-seed-data/scripts"), "/scripts", AccessMode.ReadOnly)
                      .Build();
     }
 
@@ -52,6 +54,9 @@ public sealed class LocalStackFixture : IAsyncLifetime
         using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
         await _container.StartAsync(cts.Token);
         ConnectionString = _container.GetConnectionString();
+
+        // Wait for LocalStack to be fully ready and initialization scripts to complete
+        await Task.Delay(TimeSpan.FromSeconds(30), cts.Token);
     }
 
     /// <inheritdoc />
@@ -82,10 +87,8 @@ public class KmsIntegrationTests
 
     public KmsIntegrationTests(LocalStackFixture containerInstance)
     {
-        // Expectation that local SDK has been configured correctly, whether via VS Tools or user config files
-        Environment.SetEnvironmentVariable("AWS_ACCESS_KEY_ID", "xxx");
-        Environment.SetEnvironmentVariable("AWS_SECRET_ACCESS_KEY", "xxx");
-        kmsClient = new AmazonKeyManagementServiceClient(
+        // Use TestContainers LocalStack instance with dummy credentials
+        kmsClient = new AmazonKeyManagementServiceClient("test", "test",
                                                          new AmazonKeyManagementServiceConfig()
                                                          {
                                                              UseHttp = true,
@@ -125,10 +128,10 @@ public class KmsIntegrationTests
 
         var encrypted = await encryptor.EncryptAsync(myXml, CancellationToken.None);
 
+        // Change the application discriminator to a different value
         dpOptions.ApplicationDiscriminator = "wrong";
 
-        var result = await decryptor.DecryptAsync(encrypted.EncryptedElement, CancellationToken.None);
-
+        // This should throw an InvalidCiphertextException because the context is different
         await Assert.ThrowsAsync<InvalidCiphertextException>(
                                                              async () => await decryptor.DecryptAsync(encrypted.EncryptedElement, CancellationToken.None));
     }
