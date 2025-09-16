@@ -18,7 +18,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{344B8A2F
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AspNet.DataProtection.Aws.S3", "src\AspNet.DataProtection.Aws.S3\AspNet.DataProtection.Aws.S3.csproj", "{A36A5D31-F6F5-4594-8326-1B5FF5877E8A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IntegrationTests", "integrate\IntegrationTests\IntegrationTests.csproj", "{D19EBBF5-FA0E-4EC5-A11F-9B5AC1165B39}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IntegrationTests", "test\IntegrationTests\IntegrationTests.csproj", "{D19EBBF5-FA0E-4EC5-A11F-9B5AC1165B39}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests", "test\Tests\Tests.csproj", "{37914C81-00E7-4FE5-887C-795E9DE81463}"
 EndProject

@@ -6,7 +6,7 @@
 
     <VersionPrefix>3.3.0</VersionPrefix>
     <Authors>chris mckee,hotchkj</Authors>
-    <TargetFrameworks>netstandard2.0;net6.0;net8.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;netstandard2.1;net8.0</TargetFrameworks>
     <OutputType>Library</OutputType>
     <PackageProjectUrl>https://github.com/chrismckee/AspNet.DataProtection.Aws</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

@@ -7,7 +7,7 @@
 
     <PackageId>AspNet.DataProtection.Aws.S3</PackageId>
     <PackageTags>ASP.NET;AWS;DataProtection;netcore</PackageTags>
-    <PackageReleaseNotes>Supports ASP.NET Framework 4.8 and .net 6+
+    <PackageReleaseNotes>Supports ASP.NET Framework 4.8 and .net 8+
       Allows configuration via ASP.NET Configuration Binding
       Integrates with DataProtection Application Discriminator
     </PackageReleaseNotes>
@@ -32,6 +32,8 @@
 
   <ItemGroup>
     <PackageReference Include="AWSSDK.S3" Version="[3.7,)" />
+    <PackageReference Update="Microsoft.SourceLink.GitHub" Version="8.0.0" />
+    <PackageReference Update="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -39,7 +41,7 @@
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="[8.0,)" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.0'">
+  <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.0' and '$(TargetFramework)' != 'netstandard2.1'">
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 

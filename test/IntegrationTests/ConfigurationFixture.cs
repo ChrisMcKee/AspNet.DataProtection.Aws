@@ -5,17 +5,16 @@ using System.Net;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 
-[assembly: AssemblyTrait("Category", "SkipWhenLiveUnitTesting")]
-
 namespace AspNetCore.DataProtection.Aws.IntegrationTests
 {
     public class ConfigurationFixture
     {
         public ConfigurationFixture()
         {
+#if !NETCOREAPP
             ServicePointManager.ServerCertificateValidationCallback +=
                 (sender, cert, chain, sslPolicyErrors) => { return true; };
-
+#endif
 
             var builder = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory())
                                                     .AddJsonFile("config.json");

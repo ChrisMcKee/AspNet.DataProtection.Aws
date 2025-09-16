@@ -134,9 +134,9 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
 
         public static IEnumerable<object[]> StorageClasses()
         {
-            yield return new object[] { null };
-            yield return new object[] { S3StorageClass.ReducedRedundancy };
-            yield return new object[] { S3StorageClass.Standard };
+            yield return [null!];
+            yield return [S3StorageClass.ReducedRedundancy];
+            yield return [S3StorageClass.Standard];
         }
 
         [Theory]
