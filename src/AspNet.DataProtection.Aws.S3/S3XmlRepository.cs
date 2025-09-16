@@ -141,7 +141,7 @@ namespace AspNetCore.DataProtection.Aws.S3
 
                 items.AddRange(response.S3Objects);
             }
-            while(response.IsTruncated);
+            while((bool)response.IsTruncated);
 
             // ASP.NET docs state:
             //   When the data protection system initializes, it reads the key ring from the underlying repository and caches it in memory.
