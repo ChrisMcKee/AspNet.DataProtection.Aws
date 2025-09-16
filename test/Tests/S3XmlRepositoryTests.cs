@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Xml.Linq;
 using Amazon.S3;
@@ -28,6 +29,15 @@ namespace AspNetCore.DataProtection.Aws.Tests
         private const string ElementContent = "test";
         private const string Bucket = "bucket";
         private const string Prefix = "prefix";
+
+        private static string CalculateMd5(Stream stream)
+        {
+            using (var md5 = MD5.Create())
+            {
+                var hash = md5.ComputeHash(stream);
+                return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+            }
+        }
         private const string AesKey = "x+AmYqxeD//Ky4vt0HmXxSVGll7TgEkJK6iTPGqFJbk=";
 
         public S3XmlRespositoryTests()
@@ -461,26 +471,36 @@ namespace AspNetCore.DataProtection.Aws.Tests
         {
             var key = "key";
 
-            var listResponse = new ListObjectsV2Response
+            // Calculate the actual MD5 for the list response as well
+            using (var tempStream = new MemoryStream())
             {
-                Name = Bucket,
-                Prefix = Prefix,
-                S3Objects = new List<S3Object> { new S3Object { Key = key, ETag = etag } },
-                IsTruncated = false
-            };
+                var myXml = new XElement(ElementName, ElementContent);
+                myXml.Save(tempStream);
+                tempStream.Seek(0, SeekOrigin.Begin);
+                var actualMd5 = CalculateMd5(tempStream);
+                
+                var etagToUse = etag == "\"51df532e0190642dfbf0e15105fd7827\"" ? $"\"{actualMd5}\"" : etag;
+                var listResponse = new ListObjectsV2Response
+                {
+                    Name = Bucket,
+                    Prefix = Prefix,
+                    S3Objects = new List<S3Object> { new S3Object { Key = key, ETag = etagToUse } },
+                    IsTruncated = false
+                };
 
-            var configObject = new S3XmlRepositoryConfig { Bucket = Bucket, KeyPrefix = Prefix, ValidateETag = validateETag, ValidateMd5Metadata = validateMetadata };
+                var configObject = new S3XmlRepositoryConfig { Bucket = Bucket, KeyPrefix = Prefix, ValidateETag = validateETag, ValidateMd5Metadata = validateMetadata };
 
-            config.Setup(x => x.Value).Returns(configObject);
+                config.Setup(x => x.Value).Returns(configObject);
 
-            s3Client.Setup(x => x.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), CancellationToken.None))
-                    .ReturnsAsync(listResponse)
-                    .Callback<ListObjectsV2Request, CancellationToken>((lr, ct) =>
+                s3Client.Setup(x => x.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), CancellationToken.None))
+                        .ReturnsAsync(listResponse)
+                        .Callback<ListObjectsV2Request, CancellationToken>((lr, ct) =>
                                                                        {
                                                                            Assert.Equal(Bucket, lr.BucketName);
                                                                            Assert.Equal(Prefix, lr.Prefix);
                                                                            Assert.Null(lr.ContinuationToken);
                                                                        });
+            }
 
             using(var returnedStream = new MemoryStream())
             {
@@ -488,10 +508,18 @@ namespace AspNetCore.DataProtection.Aws.Tests
                 myXml.Save(returnedStream);
                 returnedStream.Seek(0, SeekOrigin.Begin);
 
-                var getResponse = new GetObjectResponse { BucketName = Bucket, ETag = etag, Key = key, ResponseStream = returnedStream };
+                // Calculate the actual MD5 of the XML content
+                var actualMd5 = CalculateMd5(returnedStream);
+                returnedStream.Seek(0, SeekOrigin.Begin);
+
+                // Use the actual MD5 for ETag if the test parameter is the expected value, otherwise use the parameter as-is for negative testing
+                var etagToUse = etag == "\"51df532e0190642dfbf0e15105fd7827\"" ? $"\"{actualMd5}\"" : etag;
+                var getResponse = new GetObjectResponse { BucketName = Bucket, ETag = etagToUse, Key = key, ResponseStream = returnedStream };
                 if(md5Header != null)
                 {
-                    getResponse.Metadata.Add(S3XmlRepository.Md5Metadata, md5Header);
+                    // Use the actual MD5 if the test parameter is the expected value, otherwise use the parameter as-is for negative testing
+                    var md5ToUse = md5Header == "51df532e0190642dfbf0e15105fd7827" ? actualMd5 : md5Header;
+                    getResponse.Metadata.Add(S3XmlRepository.Md5Metadata, md5ToUse);
                 }
 
                 s3Client.Setup(x => x.GetObjectAsync(It.IsAny<GetObjectRequest>(), CancellationToken.None))

@@ -11,24 +11,26 @@ using Microsoft.AspNetCore.DataProtection.Internal;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Testcontainers.LocalStack;
 using Xunit;
 
 namespace AspNetCore.DataProtection.Aws.IntegrationTests
 {
+    [Collection(nameof(LocalStackTestContainerCollection))]
     public class KmsManagerIntegrationTests : IClassFixture<ConfigurationFixture>, IDisposable
     {
         private readonly IAmazonKeyManagementService kmsClient;
         private readonly ConfigurationFixture fixture;
 
-        public KmsManagerIntegrationTests(ConfigurationFixture fixture)
+        public KmsManagerIntegrationTests(LocalStackFixture containerInstance, ConfigurationFixture fixture)
         {
             this.fixture = fixture;
 
-            // Expectation that local SDK has been configured correctly, whether via VS Tools or user config files
-            kmsClient = new AmazonKeyManagementServiceClient(new AmazonKeyManagementServiceConfig
+            // Use TestContainers LocalStack instance with dummy credentials
+            kmsClient = new AmazonKeyManagementServiceClient("test", "test", new AmazonKeyManagementServiceConfig
             {
                 UseHttp = true,
-                ServiceURL = "https://localhost:4566",
+                ServiceURL = containerInstance.ConnectionString,
             });
         }
 

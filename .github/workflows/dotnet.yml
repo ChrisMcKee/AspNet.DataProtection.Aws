@@ -1,0 +1,66 @@
+name: .NET Build
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [ "main", "master" ]
+    paths:
+      - '*'
+      - '!/readme.md'
+      - '!/SECURITY.md'
+      - '!/licence.txt'
+      - '!/Benchmark/*'
+      - '!/IntegrationTest/*'
+      - '!/dists/*'
+      - '!/assets/*'
+      - '!/.github/**'
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_GENERATE_ASPNET_CERTIFICATE: false
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      docker:
+        image: docker:27-dind
+        options: --privileged
+
+    steps:
+    # - name: 'Harden Runner'
+    #   uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+    #   with:
+    #     egress-policy: audit
+
+    - uses: actions/checkout@v5
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: 9.0.x
+
+    - name: Restore dependencies
+      run: dotnet restore AspNet.DataProtection.Aws.sln
+    - name: Build
+      run: dotnet build --no-restore AspNet.DataProtection.Aws.sln -c Release
+    - name: Test
+      timeout-minutes: 20
+      env:
+        DOCKER_HOST: tcp://localhost:2376
+        DOCKER_TLS_VERIFY: 0
+        DOCKER_CERT_PATH: ""
+      run: |
+        mkdir -p ./TestResults
+        dotnet test --no-build --verbosity normal AspNet.DataProtection.Aws.sln -c Release --logger "trx;LogFileName=test-results.trx" --logger "GitHubActions" --results-directory ./TestResults --collect:"XPlat Code Coverage"
+        
+    - name: Publish Test Results
+      uses: dorny/test-reporter@v2
+      if: always()
+      with:
+        name: .NET Tests
+        path: TestResults/test-results.trx
+        reporter: dotnet-trx
