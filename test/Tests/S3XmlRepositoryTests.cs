@@ -415,7 +415,12 @@ namespace AspNetCore.DataProtection.Aws.Tests
         [Fact]
         public void ExpectEmptyQueryToSucceed()
         {
-            var listResponse = new ListObjectsV2Response { Name = Bucket, Prefix = Prefix };
+            var listResponse = new ListObjectsV2Response 
+            { 
+                Name = Bucket, 
+                Prefix = Prefix,
+                S3Objects = new List<S3Object>() // Initialize empty list to avoid null reference
+            };
 
             var configObject = new S3XmlRepositoryConfig { Bucket = Bucket, KeyPrefix = Prefix };
 

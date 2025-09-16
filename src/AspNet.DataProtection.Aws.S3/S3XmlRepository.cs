@@ -141,7 +141,7 @@ namespace AspNetCore.DataProtection.Aws.S3
 
                 items.AddRange(response.S3Objects);
             }
-            while((bool)response.IsTruncated);
+            while(response.IsTruncated != null && (bool)response.IsTruncated);
 
             // ASP.NET docs state:
             //   When the data protection system initializes, it reads the key ring from the underlying repository and caches it in memory.
@@ -160,6 +160,11 @@ namespace AspNetCore.DataProtection.Aws.S3
 
                 await Task.WhenAll(queries).ConfigureAwait(false);
 
+                if(queries.Count == 0)
+                {
+                    logger?.LogDebug("No DataProtection keys found at S3 bucket {0} with prefix {1}", Config.Bucket, Config.KeyPrefix);
+                    return [];
+                }
                 return new ReadOnlyCollection<XElement>(queries.Select(x => x.Result).Where(x => x != null).ToList());
             }
         }

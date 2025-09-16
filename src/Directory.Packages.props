@@ -7,8 +7,8 @@
   <ItemGroup>
     <PackageVersion Include="AWSSDK.KeyManagementService" Version="[4,)" />
     <PackageVersion Include="AWSSDK.S3" Version="[4,)" />
-    <PackageVersion Include="Microsoft.AspNetCore.DataProtection" Version="[8.0,)" />
-    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="[8.0,)" />
+    <PackageVersion Include="Microsoft.AspNetCore.DataProtection" Version="[9.0,)" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="[9.0,)" />
 
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="3.*" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
