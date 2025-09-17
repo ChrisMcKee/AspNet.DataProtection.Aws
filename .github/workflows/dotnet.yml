@@ -25,16 +25,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    services:
-      docker:
-        image: docker:27-dind
-        options: --privileged
+    # services:
+    #   docker:
+    #     image: docker:27-dind
+    #     options: --privileged
 
     steps:
-    # - name: 'Harden Runner'
-    #   uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
-    #   with:
-    #     egress-policy: audit
+    - name: 'Harden Runner'
+      uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+      with:
+        egress-policy: audit
 
     - uses: actions/checkout@v5
 
@@ -48,14 +48,10 @@ jobs:
     - name: Build
       run: dotnet build --no-restore AspNet.DataProtection.Aws.sln -c Release
     - name: Test
-      timeout-minutes: 20
-      env:
-        DOCKER_HOST: tcp://localhost:2376
-        DOCKER_TLS_VERIFY: 0
-        DOCKER_CERT_PATH: ""
+      timeout-minutes: 5
       run: |
         mkdir -p ./TestResults
-        dotnet test --no-build --verbosity normal AspNet.DataProtection.Aws.sln -c Release --logger "trx;LogFileName=test-results.trx" --logger "GitHubActions" --results-directory ./TestResults --collect:"XPlat Code Coverage"
+        dotnet test --no-build --verbosity normal test/Tests/Tests.csproj -c Release --logger "trx;LogFileName=test-results.trx" --logger "GitHubActions" --results-directory ./TestResults --collect:"XPlat Code Coverage"        
         
     - name: Publish Test Results
       uses: dorny/test-reporter@v2
