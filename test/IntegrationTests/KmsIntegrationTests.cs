@@ -14,7 +14,6 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Testcontainers.LocalStack;
-using Xunit;
 
 namespace AspNetCore.DataProtection.Aws.IntegrationTests;
 
