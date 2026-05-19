@@ -40,8 +40,8 @@ public sealed class LocalStackFixture : IAsyncLifetime
                                            .UntilInternalTcpPortIsAvailable(4566)
                                            .AddCustomWaitStrategy(new LocalstackContainerHealthCheck())
                                       )
-                     .WithBindMount(ToAbsolute("./localstack/aws-seed-data"), "/etc/localstack/init/ready.d", AccessMode.ReadOnly)
-                     .WithBindMount(ToAbsolute("./localstack/aws-seed-data/scripts"), "/scripts", AccessMode.ReadOnly)
+                     .WithBindMount(ToAbsolute("localstack/aws-seed-data"), "/etc/localstack/init/ready.d", AccessMode.ReadOnly)
+                     .WithBindMount(ToAbsolute("localstack/aws-seed-data/scripts"), "/scripts", AccessMode.ReadOnly)
                      .Build();
     }
 
@@ -49,12 +49,9 @@ public sealed class LocalStackFixture : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
         await _container.StartAsync(cts.Token);
         ConnectionString = _container.GetConnectionString();
-
-        // Wait for LocalStack to be fully ready and initialization scripts to complete
-        await Task.Delay(TimeSpan.FromSeconds(30), cts.Token);
     }
 
     /// <inheritdoc />
@@ -66,7 +63,7 @@ public sealed class LocalStackFixture : IAsyncLifetime
         }
     }
 
-    private static string ToAbsolute(string path) => Path.GetFullPath(path);
+    private static string ToAbsolute(string path) => Path.GetFullPath(path, AppContext.BaseDirectory);
 }
 
 [Collection(nameof(LocalStackTestContainerCollection))]
