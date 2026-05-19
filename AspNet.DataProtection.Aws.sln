@@ -5,24 +5,34 @@ VisualStudioVersion = 16.0.29613.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{851F9F19-EAF9-4C8C-81CD-0C89D4083928}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{582AE13A-3A41-4FDE-9A8D-614A3D0F108E}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".sln", ".sln", "{582AE13A-3A41-4FDE-9A8D-614A3D0F108E}"
 	ProjectSection(SolutionItems) = preProject
 		README.md = README.md
 		LICENSE.md = LICENSE.md
-		.github\workflows\publish.yaml = .github\workflows\publish.yaml
 		src\Directory.Build.props = src\Directory.Build.props
 		src\Directory.Build.targets = src\Directory.Build.targets
+		src\Directory.Packages.props = src\Directory.Packages.props
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{344B8A2F-C439-4D64-904E-A8E6363D9FA9}"
+	ProjectSection(SolutionItems) = preProject
+		test\Directory.Build.props = test\Directory.Build.props
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AspNet.DataProtection.Aws.S3", "src\AspNet.DataProtection.Aws.S3\AspNet.DataProtection.Aws.S3.csproj", "{A36A5D31-F6F5-4594-8326-1B5FF5877E8A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IntegrationTests", "integrate\IntegrationTests\IntegrationTests.csproj", "{D19EBBF5-FA0E-4EC5-A11F-9B5AC1165B39}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IntegrationTests", "test\IntegrationTests\IntegrationTests.csproj", "{D19EBBF5-FA0E-4EC5-A11F-9B5AC1165B39}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests", "test\Tests\Tests.csproj", "{37914C81-00E7-4FE5-887C-795E9DE81463}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AspNet.DataProtection.Aws.Kms", "src\AspNet.DataProtection.Aws.Kms\AspNet.DataProtection.Aws.Kms.csproj", "{405C524A-E843-43EB-8164-60976E3A4DF1}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "actions", "actions", "{F5E19392-5AB9-4C12-8B4B-E1C99E80963A}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\MergeToMain.yml = .github\workflows\MergeToMain.yml
+		.github\workflows\PullRequest.yml = .github\workflows\PullRequest.yml
+		.github\workflows\Release.yml = .github\workflows\Release.yml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -37,9 +47,11 @@ Global
 		{D19EBBF5-FA0E-4EC5-A11F-9B5AC1165B39}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D19EBBF5-FA0E-4EC5-A11F-9B5AC1165B39}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D19EBBF5-FA0E-4EC5-A11F-9B5AC1165B39}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D19EBBF5-FA0E-4EC5-A11F-9B5AC1165B39}.Release|Any CPU.Build.0 = Release|Any CPU
 		{37914C81-00E7-4FE5-887C-795E9DE81463}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{37914C81-00E7-4FE5-887C-795E9DE81463}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{37914C81-00E7-4FE5-887C-795E9DE81463}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{37914C81-00E7-4FE5-887C-795E9DE81463}.Release|Any CPU.Build.0 = Release|Any CPU
 		{405C524A-E843-43EB-8164-60976E3A4DF1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{405C524A-E843-43EB-8164-60976E3A4DF1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{405C524A-E843-43EB-8164-60976E3A4DF1}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -53,6 +65,7 @@ Global
 		{D19EBBF5-FA0E-4EC5-A11F-9B5AC1165B39} = {344B8A2F-C439-4D64-904E-A8E6363D9FA9}
 		{405C524A-E843-43EB-8164-60976E3A4DF1} = {851F9F19-EAF9-4C8C-81CD-0C89D4083928}
 		{37914C81-00E7-4FE5-887C-795E9DE81463} = {344B8A2F-C439-4D64-904E-A8E6363D9FA9}
+		{F5E19392-5AB9-4C12-8B4B-E1C99E80963A} = {582AE13A-3A41-4FDE-9A8D-614A3D0F108E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6B037DA9-2C1B-420D-B017-F43BA6586DEB}

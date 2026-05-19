@@ -28,9 +28,12 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
             var listed = await s3Client.ListObjectsV2Async(new ListObjectsV2Request { BucketName = bucket, Prefix = prefix });
 
             // In sequence as we do not expect more than one or two of these assuming the tests work properly
-            foreach(var s3Obj in listed.S3Objects)
+            if (listed.S3Objects != null)
             {
-                await s3Client.DeleteObjectAsync(new DeleteObjectRequest { BucketName = bucket, Key = s3Obj.Key });
+                foreach(var s3Obj in listed.S3Objects)
+                {
+                    await s3Client.DeleteObjectAsync(new DeleteObjectRequest { BucketName = bucket, Key = s3Obj.Key });
+                }
             }
         }
     }

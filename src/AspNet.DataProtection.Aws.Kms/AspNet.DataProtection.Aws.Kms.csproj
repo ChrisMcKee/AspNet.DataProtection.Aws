@@ -7,38 +7,24 @@
 
     <PackageId>AspNet.DataProtection.Aws.Kms</PackageId>
     <PackageTags>ASP.NET;AWS;DataProtection;netcore,Kms</PackageTags>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReleaseNotes>Supports ASP.NET Framework 4.8 and .net 6+
+    <PackageReleaseNotes>Supports ASP.NET Framework 4.8 and .net 10+
       Allows configuration via ASP.NET Configuration Binding
     </PackageReleaseNotes>
   </PropertyGroup>
 
-  <ItemGroup>
-    <None Include="..\..\LICENSE.md" Pack="true" PackagePath="\" />
-    <None Include="..\..\README.md" Pack="true" PackagePath="\"/>
-  </ItemGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <WarningsAsErrors />
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+  <PropertyGroup>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.KeyManagementService" Version="[3.7,)" />
+    <PackageReference Include="AWSSDK.Core" />
+    <PackageReference Include="AWSSDK.KeyManagementService" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="[8.0,)" />
-    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="[8.0,)" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.0'">
+  <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.0' and '$(TargetFramework)' != 'netstandard2.1'">
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 

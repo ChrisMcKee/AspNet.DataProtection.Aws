@@ -139,9 +139,12 @@ namespace AspNetCore.DataProtection.Aws.S3
                                                              ct)
                                          .ConfigureAwait(false);
 
-                items.AddRange(response.S3Objects);
+                if (response.S3Objects != null)
+                {
+                    items.AddRange(response.S3Objects);
+                }
             }
-            while(response.IsTruncated);
+            while(response.IsTruncated != null && (bool)response.IsTruncated);
 
             // ASP.NET docs state:
             //   When the data protection system initializes, it reads the key ring from the underlying repository and caches it in memory.
@@ -160,6 +163,11 @@ namespace AspNetCore.DataProtection.Aws.S3
 
                 await Task.WhenAll(queries).ConfigureAwait(false);
 
+                if(queries.Count == 0)
+                {
+                    logger?.LogDebug("No DataProtection keys found at S3 bucket {0} with prefix {1}", Config.Bucket, Config.KeyPrefix);
+                    return [];
+                }
                 return new ReadOnlyCollection<XElement>(queries.Select(x => x.Result).Where(x => x != null).ToList());
             }
         }
@@ -198,26 +206,13 @@ namespace AspNetCore.DataProtection.Aws.S3
 
                     using(var md5 = testChecksum ? MD5.Create() : null)
                     {
-                        XElement elementToReturn;
+                        byte[] payload;
                         using(var hashStream = testChecksum ? new CryptoStream(response.ResponseStream, md5, CryptoStreamMode.Read) : response.ResponseStream)
                         {
-                            // Stream returned from AWS SDK does not automatically uncompress even with Content-Encoding set
-                            // Not that surprising considering that S3 treats the data as just N bytes; that it was compressed
-                            // client-side doesn't really matter.
-                            //
-                            // Compatibility: If we set compress=true but load something without gzip encoding then skip and
-                            // load as uncompressed. If we set compress=false but load something with gzip encoding, load as
-                            // compressed otherwise loading won't work.
-                            if(response.Headers.ContentEncoding == "gzip")
+                            using(var payloadStream = new MemoryStream())
                             {
-                                using(var responseStream = new GZipStream(hashStream, CompressionMode.Decompress))
-                                {
-                                    elementToReturn = XElement.Load(responseStream);
-                                }
-                            }
-                            else
-                            {
-                                elementToReturn = XElement.Load(hashStream);
+                                await hashStream.CopyToAsync(payloadStream, 81920, ct).ConfigureAwait(false);
+                                payload = payloadStream.ToArray();
                             }
                         }
 
@@ -231,13 +226,46 @@ namespace AspNetCore.DataProtection.Aws.S3
                             }
                         }
 
-                        return elementToReturn;
+                        var shouldDecompress = IsGzipContentEncoding(response.Headers.ContentEncoding) || LooksLikeGZipPayload(payload);
+                        return LoadElement(payload, shouldDecompress);
                     }
                 }
             }
             finally
             {
                 throttler.Release();
+            }
+        }
+
+        private static bool IsGzipContentEncoding(string contentEncoding)
+        {
+            if(string.IsNullOrWhiteSpace(contentEncoding))
+            {
+                return false;
+            }
+
+            // Some providers combine encodings (for example: "aws-chunked,gzip").
+            return contentEncoding.IndexOf("gzip", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool LooksLikeGZipPayload(byte[] payload)
+        {
+            return payload.Length >= 2 && payload[0] == 0x1F && payload[1] == 0x8B;
+        }
+
+        private static XElement LoadElement(byte[] payload, bool shouldDecompress)
+        {
+            using(var payloadStream = new MemoryStream(payload, writable: false))
+            {
+                if(!shouldDecompress)
+                {
+                    return XElement.Load(payloadStream);
+                }
+
+                using(var responseStream = new GZipStream(payloadStream, CompressionMode.Decompress))
+                {
+                    return XElement.Load(responseStream);
+                }
             }
         }
 

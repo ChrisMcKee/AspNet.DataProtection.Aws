@@ -4,48 +4,64 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Threading.Tasks;
 using Amazon.KeyManagementService;
+using Amazon.S3;
 using AspNetCore.DataProtection.Aws.Kms;
+using AspNetCore.DataProtection.Aws.S3;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.Internal;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Testcontainers.LocalStack;
 using Xunit;
 
 namespace AspNetCore.DataProtection.Aws.IntegrationTests
 {
-    public class KmsManagerIntegrationTests : IClassFixture<ConfigurationFixture>, IDisposable
+    [Collection(nameof(LocalStackTestContainerCollection))]
+    public sealed class CombinedManagerIntegrationTests : IDisposable
     {
+        private readonly IAmazonS3 s3Client;
         private readonly IAmazonKeyManagementService kmsClient;
-        private readonly ConfigurationFixture fixture;
+        private readonly ICleanupS3 s3Cleanup;
 
-        public KmsManagerIntegrationTests(ConfigurationFixture fixture)
+        public CombinedManagerIntegrationTests(LocalStackFixture containerInstance)
         {
-            this.fixture = fixture;
-
-            // Expectation that local SDK has been configured correctly, whether via VS Tools or user config files
-            kmsClient = new AmazonKeyManagementServiceClient(new AmazonKeyManagementServiceConfig
+            // Use TestContainers LocalStack instance with dummy credentials
+            s3Client = new AmazonS3Client("test", "test", new AmazonS3Config
             {
                 UseHttp = true,
-                ServiceURL = "https://localhost:4566",
+                ServiceURL = containerInstance.ConnectionString,
+                ForcePathStyle = true,
             });
+            s3Client.EnsureBucketExistsAsync(S3IntegrationTests.BucketName);
+            kmsClient = new AmazonKeyManagementServiceClient("test", "test", new AmazonKeyManagementServiceConfig
+            {
+                UseHttp = true,
+                ServiceURL = containerInstance.ConnectionString,
+            });
+            s3Cleanup = new CleanupS3(s3Client);
         }
 
         public void Dispose()
         {
+            s3Client.Dispose();
             kmsClient.Dispose();
         }
 
         [Fact]
-        public void ExpectFullKeyManagerExplicitAwsStoreRetrieveToSucceed()
+        public async Task ExpectFullKeyManagerExplicitAwsStoreRetrieveToSucceed()
         {
-            var config = new KmsXmlEncryptorConfig(KmsIntegrationTests.KmsTestingKey);
+            var s3Config = new S3XmlRepositoryConfig(S3IntegrationTests.BucketName) { KeyPrefix = "CombinedXmlKeyManager1/" };
+            await s3Cleanup.ClearKeys(S3IntegrationTests.BucketName, s3Config.KeyPrefix);
+            var kmsConfig = new KmsXmlEncryptorConfig(KmsIntegrationTests.KmsTestingKey);
 
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddDataProtection()
-                             .PersistKeysToEphemeral()
-                             .ProtectKeysWithAwsKms(kmsClient, config);
+                             .SetApplicationName(KmsIntegrationTests.ApplicationName)
+                             .PersistKeysToAwsS3(s3Client, s3Config)
+                             .ProtectKeysWithAwsKms(kmsClient, kmsConfig);
             using(var serviceProvider = serviceCollection.BuildServiceProvider())
             {
                 var keyManager = new XmlKeyManager(serviceProvider.GetRequiredService<IOptions<KeyManagementOptions>>(),
@@ -65,45 +81,19 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
         }
 
         [Fact]
-        public void ExpectFullKeyManagerExplicitAwsStoreRetrieveWithConfigToSucceed()
+        public async Task ExpectFullKeyManagerStoreRetrieveToSucceed()
         {
-            var section = fixture.Configuration.GetSection("kmsTestCase");
-
-            // Just make sure config is what is actually expected - of course normally you'd not access the config like this directly
-            Assert.Equal(KmsIntegrationTests.KmsTestingKey, section["keyId"]);
+            var s3Config = new S3XmlRepositoryConfig(S3IntegrationTests.BucketName) { KeyPrefix = "CombinedXmlKeyManager2/" };
+            await s3Cleanup.ClearKeys(S3IntegrationTests.BucketName, s3Config.KeyPrefix);
+            var kmsConfig = new KmsXmlEncryptorConfig(KmsIntegrationTests.KmsTestingKey);
 
             var serviceCollection = new ServiceCollection();
-            serviceCollection.AddDataProtection()
-                             .PersistKeysToEphemeral()
-                             .ProtectKeysWithAwsKms(kmsClient, section);
-            using(var serviceProvider = serviceCollection.BuildServiceProvider())
-            {
-                var keyManager = new XmlKeyManager(serviceProvider.GetRequiredService<IOptions<KeyManagementOptions>>(),
-                                                   serviceProvider.GetRequiredService<IActivator>());
-
-                var activationDate = new DateTimeOffset(new DateTime(1980, 1, 1));
-                var expirationDate = new DateTimeOffset(new DateTime(1980, 6, 1));
-                keyManager.CreateNewKey(activationDate, expirationDate);
-
-                IReadOnlyCollection<IKey> keys = keyManager.GetAllKeys();
-
-                Assert.Single(keys);
-                Assert.Equal(activationDate, keys.Single().ActivationDate);
-                Assert.Equal(expirationDate, keys.Single().ExpirationDate);
-                Assert.NotNull(keys.Single().Descriptor);
-            }
-        }
-
-        [Fact]
-        public void ExpectFullKeyManagerStoreRetrieveToSucceed()
-        {
-            var config = new KmsXmlEncryptorConfig(KmsIntegrationTests.KmsTestingKey);
-
-            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton(s3Client);
             serviceCollection.AddSingleton(kmsClient);
             serviceCollection.AddDataProtection()
-                             .PersistKeysToEphemeral()
-                             .ProtectKeysWithAwsKms(config);
+                             .SetApplicationName(KmsIntegrationTests.ApplicationName)
+                             .PersistKeysToAwsS3(s3Config)
+                             .ProtectKeysWithAwsKms(kmsConfig);
             using(var serviceProvider = serviceCollection.BuildServiceProvider())
             {
                 var keyManager = new XmlKeyManager(serviceProvider.GetRequiredService<IOptions<KeyManagementOptions>>(),
@@ -123,46 +113,19 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
         }
 
         [Fact]
-        public void ExpectFullKeyManagerStoreRetrieveWithConfigToSucceed()
+        public async Task ExpectProtectRoundTripToSucceed()
         {
-            var section = fixture.Configuration.GetSection("kmsTestCase");
-
-            // Just make sure config is what is actually expected - of course normally you'd not access the config like this directly
-            Assert.Equal(KmsIntegrationTests.KmsTestingKey, section["keyId"]);
+            var s3Config = new S3XmlRepositoryConfig(S3IntegrationTests.BucketName) { KeyPrefix = "CombinedXmlKeyManager3/" };
+            await s3Cleanup.ClearKeys(S3IntegrationTests.BucketName, s3Config.KeyPrefix);
+            var kmsConfig = new KmsXmlEncryptorConfig(KmsIntegrationTests.KmsTestingKey);
 
             var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton(s3Client);
             serviceCollection.AddSingleton(kmsClient);
             serviceCollection.AddDataProtection()
-                             .PersistKeysToEphemeral()
-                             .ProtectKeysWithAwsKms(section);
-            using(var serviceProvider = serviceCollection.BuildServiceProvider())
-            {
-                var keyManager = new XmlKeyManager(serviceProvider.GetRequiredService<IOptions<KeyManagementOptions>>(),
-                                                   serviceProvider.GetRequiredService<IActivator>());
-
-                var activationDate = new DateTimeOffset(new DateTime(1980, 1, 1));
-                var expirationDate = new DateTimeOffset(new DateTime(1980, 6, 1));
-                keyManager.CreateNewKey(activationDate, expirationDate);
-
-                IReadOnlyCollection<IKey> keys = keyManager.GetAllKeys();
-
-                Assert.Single(keys);
-                Assert.Equal(activationDate, keys.Single().ActivationDate);
-                Assert.Equal(expirationDate, keys.Single().ExpirationDate);
-                Assert.NotNull(keys.Single().Descriptor);
-            }
-        }
-
-        [Fact]
-        public void ExpectProtectRoundTripToSucceed()
-        {
-            var config = new KmsXmlEncryptorConfig(KmsIntegrationTests.KmsTestingKey);
-
-            var serviceCollection = new ServiceCollection();
-            serviceCollection.AddSingleton(kmsClient);
-            serviceCollection.AddDataProtection()
-                             .PersistKeysToEphemeral()
-                             .ProtectKeysWithAwsKms(config);
+                             .SetApplicationName(KmsIntegrationTests.ApplicationName)
+                             .PersistKeysToAwsS3(s3Config)
+                             .ProtectKeysWithAwsKms(kmsConfig);
             using(var serviceProvider = serviceCollection.BuildServiceProvider())
             {
                 var prov = serviceProvider.GetRequiredService<IDataProtectionProvider>().CreateProtector("bob");
@@ -177,21 +140,23 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
         [Theory]
         [InlineData("test1", "test2", true)]
         [InlineData("test1", "test1", false)]
-        public void ExpectApplicationIsolationToThrow(string app1, string app2, bool throws)
+        public async Task ExpectApplicationIsolationToThrow(string app1, string app2, bool throws)
         {
-            var config = new KmsXmlEncryptorConfig(KmsIntegrationTests.KmsTestingKey);
+            var s3Config = new S3XmlRepositoryConfig(S3IntegrationTests.BucketName) { KeyPrefix = "CombinedXmlKeyManager4/" };
+            await s3Cleanup.ClearKeys(S3IntegrationTests.BucketName, s3Config.KeyPrefix);
+            var kmsConfig = new KmsXmlEncryptorConfig(KmsIntegrationTests.KmsTestingKey);
 
-            var sharedStorage = new EphemeralXmlRepository();
             var plaintext = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
             byte[] encrypted;
 
             {
                 var serviceCollection = new ServiceCollection();
+                serviceCollection.AddSingleton(s3Client);
                 serviceCollection.AddSingleton(kmsClient);
                 serviceCollection.AddDataProtection()
                                  .SetApplicationName(app1)
-                                 .PersistKeysToEphemeral(sharedStorage)
-                                 .ProtectKeysWithAwsKms(config);
+                                 .PersistKeysToAwsS3(s3Config)
+                                 .ProtectKeysWithAwsKms(kmsConfig);
                 using(var serviceProvider = serviceCollection.BuildServiceProvider())
                 {
                     var prov = serviceProvider.GetRequiredService<IDataProtectionProvider>().CreateProtector("bob");
@@ -202,11 +167,12 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
 
             {
                 var serviceCollection = new ServiceCollection();
+                serviceCollection.AddSingleton(s3Client);
                 serviceCollection.AddSingleton(kmsClient);
                 serviceCollection.AddDataProtection()
                                  .SetApplicationName(app2)
-                                 .PersistKeysToEphemeral(sharedStorage)
-                                 .ProtectKeysWithAwsKms(config);
+                                 .PersistKeysToAwsS3(s3Config)
+                                 .ProtectKeysWithAwsKms(kmsConfig);
                 using(var serviceProvider = serviceCollection.BuildServiceProvider())
                 {
                     var prov = serviceProvider.GetRequiredService<IDataProtectionProvider>().CreateProtector("bob");

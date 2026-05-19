@@ -6,11 +6,14 @@
     <IsPackable>false</IsPackable>
     <!-- Disable analyzer warning since AWS SDK has incorrect versioning behaviour -->
     <!-- 1701;1702;1705 are Microsoft advice - cargo culting -->
-    <NoWarn>1701;1702;1705;IDE1002</NoWarn>
+    <NoWarn>1701;1702;1705;IDE1002;NU1901;NU1904</NoWarn>
+    <!-- Workaround for https://github.com/Microsoft/msbuild/issues/2274 -->
+    <AddSyntheticProjectReferencesForSolutionDependencies>false</AddSyntheticProjectReferencesForSolutionDependencies>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
-    <RootNamespace>AspNetCore.DataProtection.Aws.Tests</RootNamespace>
+    <RootNamespace>AspNetCore.DataProtection.Aws.IntegrationTests</RootNamespace>
     <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
     <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
     <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
   </PropertyGroup>
@@ -24,7 +27,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
+    <None Include="config.json" CopyToOutputDirectory="Always" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="localstack\aws-seed-data\init.sh">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="localstack\aws-seed-data\scripts\*.sh">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>
