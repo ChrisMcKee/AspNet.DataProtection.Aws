@@ -16,8 +16,6 @@
     <!-- 1701;1702;1705 are Microsoft advice - cargo culting -->
     <NoWarn>1701;1702;1705;IDE1002</NoWarn>
     <DebugSymbols>true</DebugSymbols>
-    <DebugType>embedded</DebugType>
-
 
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>..\aspnetdpa.snk</AssemblyOriginatorKeyFile>
