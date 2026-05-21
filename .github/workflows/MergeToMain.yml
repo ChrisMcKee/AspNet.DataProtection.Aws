@@ -35,7 +35,7 @@ jobs:
         timeout-minutes: 15
         run: |
           mkdir -p ./TestResults
-          dotnet test --report-github --coverage --results-directory ./TestResults --report-trx --report-trx-filename test-results.trx
+          dotnet test --project test/Tests/Tests.csproj --report-github --coverage --results-directory ./TestResults --report-trx --report-trx-filename test-results.trx
 
       - name: Publish Test Results
         uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3
