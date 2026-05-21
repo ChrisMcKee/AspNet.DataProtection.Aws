@@ -49,7 +49,7 @@ public sealed class LocalStackFixture : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(20));
         await _container.StartAsync(cts.Token);
         ConnectionString = _container.GetConnectionString();
     }

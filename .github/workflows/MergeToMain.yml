@@ -9,9 +9,7 @@ permissions:
 
 env:
   DOTNET_NOLOGO: true
-  TESTCONTAINERS_RYUK_DISABLED: true
-  DOCKER_HOST: unix:///var/run/docker.sock
-
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
 jobs:
   build_and_create_a_nuget:
     name: Build and create a BETA NuGet package (GPR)

@@ -13,6 +13,7 @@ permissions:
 
 env:
   DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
   build_and_create_a_nuget:
@@ -34,7 +35,7 @@ jobs:
       - run: dotnet build --configuration Release -p:ContinuousIntegrationBuild=true -p:version=${{ env.RELEASE_VERSION }}
 
       - name: Test
-        timeout-minutes: 7
+        timeout-minutes: 15
         run: |
           mkdir -p ./TestResults
           dotnet test --report-github --results-directory ./TestResults --report-trx --report-trx-filename test-results.trx
