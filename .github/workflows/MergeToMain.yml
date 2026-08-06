@@ -2,60 +2,45 @@ name: Merge Pull Requests into 'main'
 
 on:
   push:
-    branches: [main]
+    branches: [master]
+    paths:
+      - 'src/**/*.cs'
+      - 'src/**/*.csproj'
+      - 'test/**/*.cs'
+      - 'test/**/*.csproj'
 
 permissions:
   packages: write
 
 env:
   DOTNET_NOLOGO: true
-  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
 jobs:
   build_and_create_a_nuget:
-    name: Build and create a BETA NuGet package (GPR)
+    name: CI
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Build version prefix/suffix
         run: |
           echo "VERSION_PREFIX=${{ github.run_number }}.0.0" >> $GITHUB_ENV
-          echo "VERSION_SUFFIX=beta" >> $GITHUB_ENV
+          echo "VERSION_SUFFIX=beta.${{ github.run_attempt }}" >> $GITHUB_ENV
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
 
-      - run: dotnet restore --verbosity minimal
+      - run: dotnet restore ./AspNet.DataProtection.Aws.sln --verbosity minimal
 
-      - run: dotnet build --configuration Release -p:ContinuousIntegrationBuild=true -p:VersionPrefix=$VERSION_PREFIX --version-suffix $VERSION_SUFFIX
+      - run: dotnet build ./AspNet.DataProtection.Aws.sln --configuration Release -p:ContinuousIntegrationBuild=true -p:VersionPrefix=$VERSION_PREFIX --version-suffix $VERSION_SUFFIX --verbosity minimal
 
-      - name: Test
-        timeout-minutes: 15
-        run: |
-          mkdir -p ./TestResults
-          dotnet test --project test/Tests/Tests.csproj --report-github --coverage --results-directory ./TestResults --report-trx --report-trx-filename test-results.trx
+      - name: Run tests
+        run: dotnet test ./test/Tests/Tests.csproj --configuration Release --no-build --verbosity minimal
 
-      - name: Publish Test Results
-        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3
-        if: always()
-        with:
-          name: .NET Tests
-          path: TestResults/test-results.trx
-          reporter: dotnet-trx
+      - name: Pack S3 NuGet package
+        run: dotnet pack ./src/AspNet.DataProtection.Aws.S3/AspNet.DataProtection.Aws.S3.csproj --configuration Release --no-build --output ./artifacts -p:VersionPrefix=$VERSION_PREFIX --version-suffix $VERSION_SUFFIX -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
 
-      - run: dotnet pack --configuration Release --no-build --output ./artifacts -p:VersionPrefix=$VERSION_PREFIX --version-suffix $VERSION_SUFFIX -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
-
-      - name: Publish artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: NuGetPackage.${{ env.VERSION_PREFIX }}-${{ env.VERSION_SUFFIX }}.nupkg.zip
-          path: ./artifacts/*
-
-      - name: Publish to GPR
-        run: |
-          dotnet nuget push "./artifacts/*.nupkg" \
-            --no-symbols \
-            --api-key ${{ secrets.GITHUB_TOKEN }} \
-            --source https://nuget.pkg.github.com/${{ github.repository_owner }}
+      - name: Pack KMS NuGet package
+        run: dotnet pack ./src/AspNet.DataProtection.Aws.Kms/AspNet.DataProtection.Aws.Kms.csproj --configuration Release --no-build --output ./artifacts -p:VersionPrefix=$VERSION_PREFIX --version-suffix $VERSION_SUFFIX -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
