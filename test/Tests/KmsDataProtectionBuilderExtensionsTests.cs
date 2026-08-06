@@ -1,4 +1,4 @@
-﻿// Copyright(c) 2018 Jeff Hotchkiss, Modifications 2023 Chris McKee
+// Copyright(c) 2018 Jeff Hotchkiss, Modifications 2023 Chris McKee
 // Licensed under the MIT License. See License.md in the project root for license information.
 using System;
 using System.Collections.Generic;
@@ -12,7 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Moq;
+using FakeItEasy;
 using Xunit;
 using DataProtectionBuilderExtensions = AspNetCore.DataProtection.Aws.Kms.DataProtectionBuilderExtensions;
 
@@ -20,32 +20,23 @@ namespace AspNetCore.DataProtection.Aws.Tests
 {
     public class KmsDataProtectionBuilderExtensionsTests
     {
-        private readonly Mock<IDataProtectionBuilder> builder;
-        private readonly Mock<IServiceCollection> svcCollection;
-        private readonly Mock<IAmazonKeyManagementService> client;
-        private readonly Mock<IServiceProvider> provider;
-        private readonly Mock<ILoggerFactory> loggerFactory;
-        private readonly Mock<IOptions<KmsXmlEncryptorConfig>> snapshot;
-        private readonly Mock<IOptions<DataProtectionOptions>> dpSnapshot;
-        private readonly MockRepository repository;
+        private readonly IDataProtectionBuilder builder;
+        private readonly IServiceCollection svcCollection;
+        private readonly IAmazonKeyManagementService client;
+        private readonly IServiceProvider provider;
+        private readonly ILoggerFactory loggerFactory;
+        private readonly IOptions<KmsXmlEncryptorConfig> snapshot;
+        private readonly IOptions<DataProtectionOptions> dpSnapshot;
 
         public KmsDataProtectionBuilderExtensionsTests()
         {
-            repository = new MockRepository(MockBehavior.Strict);
-            builder = repository.Create<IDataProtectionBuilder>();
-            client = repository.Create<IAmazonKeyManagementService>();
-            svcCollection = repository.Create<IServiceCollection>();
-            provider = repository.Create<IServiceProvider>();
-            loggerFactory = repository.Create<ILoggerFactory>();
-            snapshot = repository.Create<IOptions<KmsXmlEncryptorConfig>>();
-            dpSnapshot = repository.Create<IOptions<DataProtectionOptions>>();
-        }
-
-#pragma warning disable xUnit1013 // Public method should be marked as test
-        public void Dispose()
-#pragma warning restore xUnit1013
-        {
-            repository.VerifyAll();
+            builder = A.Fake<IDataProtectionBuilder>(o => o.Strict());
+            client = A.Fake<IAmazonKeyManagementService>(o => o.Strict());
+            svcCollection = A.Fake<IServiceCollection>(o => o.Strict());
+            provider = A.Fake<IServiceProvider>(o => o.Strict());
+            loggerFactory = A.Fake<ILoggerFactory>(o => o.Strict());
+            snapshot = A.Fake<IOptions<KmsXmlEncryptorConfig>>(o => o.Strict());
+            dpSnapshot = A.Fake<IOptions<DataProtectionOptions>>(o => o.Strict());
         }
 
         [Theory]
@@ -54,24 +45,24 @@ namespace AspNetCore.DataProtection.Aws.Tests
         public void ExpectBuilderAdditions(bool withClient)
         {
             IServiceCollection services = new ServiceCollection();
-            builder.Setup(x => x.Services).Returns(svcCollection.Object);
-            svcCollection.Setup(x => x.GetEnumerator()).Returns(() => services.GetEnumerator());
-            svcCollection.Setup(x => x.Add(It.IsAny<ServiceDescriptor>()))
-                         .Callback<ServiceDescriptor>(sd => { services.TryAdd(sd); });
-            svcCollection.Setup(x => x.Count).Returns(services.Count);
+            A.CallTo(() => builder.Services).Returns(svcCollection);
+            A.CallTo(() => svcCollection.GetEnumerator()).ReturnsLazily(() => services.GetEnumerator());
+            A.CallTo(() => svcCollection.Add(A<ServiceDescriptor>._))
+             .Invokes((ServiceDescriptor sd) => { services.TryAdd(sd); });
+            A.CallTo(() => svcCollection.Count).Returns(services.Count);
 
             var config = new KmsXmlEncryptorConfig("keyId");
 
             // Repeat call to ensure cumulative calls work
             if(withClient)
             {
-                builder.Object.ProtectKeysWithAwsKms(client.Object, config);
-                builder.Object.ProtectKeysWithAwsKms(client.Object, config);
+                builder.ProtectKeysWithAwsKms(client, config);
+                builder.ProtectKeysWithAwsKms(client, config);
             }
             else
             {
-                builder.Object.ProtectKeysWithAwsKms(config);
-                builder.Object.ProtectKeysWithAwsKms(config);
+                builder.ProtectKeysWithAwsKms(config);
+                builder.ProtectKeysWithAwsKms(config);
 
                 // We haven't passed in an aws key-management service and we don't have one registered for it to pick up at registration.
                 Assert.Equal(0, services.Count(x => x.ServiceType == typeof(IAmazonKeyManagementService)));
@@ -85,12 +76,12 @@ namespace AspNetCore.DataProtection.Aws.Tests
             Assert.Equal(ServiceLifetime.Singleton, services.Single(x => x.ServiceType == typeof(IConfigureOptions<KeyManagementOptions>)).Lifetime);
             Assert.Equal(ServiceLifetime.Singleton, services.Single(x => x.ServiceType == typeof(IConfigureOptions<KmsXmlEncryptorConfig>)).Lifetime);
 
-            provider.Setup(x => x.GetService(typeof(IAmazonKeyManagementService))).Returns(client.Object);
+            A.CallTo(() => provider.GetService(typeof(IAmazonKeyManagementService))).Returns(client);
 
             if(withClient)
             {
                 Assert.Equal(ServiceLifetime.Singleton, services.Single(x => x.ServiceType == typeof(IAmazonKeyManagementService)).Lifetime);
-                Assert.Same(client.Object, services.Single(x => x.ServiceType == typeof(IAmazonKeyManagementService)).ImplementationInstance);
+                Assert.Same(client, services.Single(x => x.ServiceType == typeof(IAmazonKeyManagementService)).ImplementationInstance);
             }
 
             // Ensure we run equivalent config for the actual configuration object
@@ -98,15 +89,15 @@ namespace AspNetCore.DataProtection.Aws.Tests
             var optionsObject = new KmsXmlEncryptorConfig();
             ((IConfigureOptions<KmsXmlEncryptorConfig>)configureObject)?.Configure(optionsObject);
 
-            provider.Setup(x => x.GetService(typeof(ILoggerFactory))).Returns(loggerFactory.Object);
-            provider.Setup(x => x.GetService(typeof(IOptions<KmsXmlEncryptorConfig>))).Returns(snapshot.Object);
-            provider.Setup(x => x.GetService(typeof(IOptions<DataProtectionOptions>))).Returns(dpSnapshot.Object);
-            loggerFactory.Setup(x => x.CreateLogger(typeof(KmsXmlEncryptor).FullName)).Returns(repository.Create<ILogger<KmsXmlEncryptor>>().Object);
-            snapshot.Setup(x => x.Value).Returns(optionsObject);
+            A.CallTo(() => provider.GetService(typeof(ILoggerFactory))).Returns(loggerFactory);
+            A.CallTo(() => provider.GetService(typeof(IOptions<KmsXmlEncryptorConfig>))).Returns(snapshot);
+            A.CallTo(() => provider.GetService(typeof(IOptions<DataProtectionOptions>))).Returns(dpSnapshot);
+            A.CallTo(() => loggerFactory.CreateLogger(typeof(KmsXmlEncryptor).FullName)).Returns(A.Fake<ILogger<KmsXmlEncryptor>>());
+            A.CallTo(() => snapshot.Value).Returns(optionsObject);
             var dbOptions = new DataProtectionOptions();
-            dpSnapshot.Setup(x => x.Value).Returns(dbOptions);
+            A.CallTo(() => dpSnapshot.Value).Returns(dbOptions);
 
-            var configure = services.First(x => x.ServiceType == typeof(IConfigureOptions<KeyManagementOptions>)).ImplementationFactory(provider.Object);
+            var configure = services.First(x => x.ServiceType == typeof(IConfigureOptions<KeyManagementOptions>)).ImplementationFactory(provider);
             var options = new KeyManagementOptions();
             ((IConfigureOptions<KeyManagementOptions>)configure).Configure(options);
             Assert.IsType<KmsXmlEncryptor>(options.XmlEncryptor);
@@ -118,28 +109,28 @@ namespace AspNetCore.DataProtection.Aws.Tests
         public void ExpectBuilderAdditionsConfig(bool withClient)
         {
             IServiceCollection services = new ServiceCollection();
-            builder.Setup(x => x.Services).Returns(svcCollection.Object);
-            svcCollection.Setup(x => x.GetEnumerator()).Returns(() => services.GetEnumerator());
-            svcCollection.Setup(x => x.Add(It.IsAny<ServiceDescriptor>()))
-                         .Callback<ServiceDescriptor>(sd => { services.TryAdd(sd); });
-            svcCollection.Setup(x => x.Count).Returns(services.Count);
+            A.CallTo(() => builder.Services).Returns(svcCollection);
+            A.CallTo(() => svcCollection.GetEnumerator()).ReturnsLazily(() => services.GetEnumerator());
+            A.CallTo(() => svcCollection.Add(A<ServiceDescriptor>._))
+             .Invokes((ServiceDescriptor sd) => { services.TryAdd(sd); });
+            A.CallTo(() => svcCollection.Count).Returns(services.Count);
 
             // An empty collection seems to be enough to run what is eventually ConfigurationBinder.Bind, since there is no way to mock the options configure call
             // ReSharper disable once CollectionNeverUpdated.Local
             var configChildren = new List<IConfigurationSection>();
-            Mock<IConfiguration> configMock = repository.Create<IConfiguration>();
-            configMock.Setup(x => x.GetChildren()).Returns(configChildren);
+            IConfiguration configFake = A.Fake<IConfiguration>(o => o.Strict());
+            A.CallTo(() => configFake.GetChildren()).Returns(configChildren);
 
             // Repeat call to ensure cumulative calls work
             if(withClient)
             {
-                builder.Object.ProtectKeysWithAwsKms(client.Object, configMock.Object);
-                builder.Object.ProtectKeysWithAwsKms(client.Object, configMock.Object);
+                builder.ProtectKeysWithAwsKms(client, configFake);
+                builder.ProtectKeysWithAwsKms(client, configFake);
             }
             else
             {
-                builder.Object.ProtectKeysWithAwsKms(configMock.Object);
-                builder.Object.ProtectKeysWithAwsKms(configMock.Object);
+                builder.ProtectKeysWithAwsKms(configFake);
+                builder.ProtectKeysWithAwsKms(configFake);
             }
 
             Assert.Equal(withClient ? 1 : 0, services.Count(x => x.ServiceType == typeof(IAmazonKeyManagementService)));
@@ -150,11 +141,11 @@ namespace AspNetCore.DataProtection.Aws.Tests
             Assert.Equal(ServiceLifetime.Singleton, services.Single(x => x.ServiceType == typeof(IConfigureOptions<KeyManagementOptions>)).Lifetime);
             Assert.Equal(ServiceLifetime.Singleton, services.Single(x => x.ServiceType == typeof(IConfigureOptions<KmsXmlEncryptorConfig>)).Lifetime);
 
-            provider.Setup(x => x.GetService(typeof(IAmazonKeyManagementService))).Returns(client.Object);
+            A.CallTo(() => provider.GetService(typeof(IAmazonKeyManagementService))).Returns(client);
             if(withClient)
             {
                 Assert.Equal(ServiceLifetime.Singleton, services.Single(x => x.ServiceType == typeof(IAmazonKeyManagementService)).Lifetime);
-                Assert.Same(client.Object, services.Single(x => x.ServiceType == typeof(IAmazonKeyManagementService)).ImplementationInstance);
+                Assert.Same(client, services.Single(x => x.ServiceType == typeof(IAmazonKeyManagementService)).ImplementationInstance);
             }
 
             // Ensure we run equivalent config for the actual configuration object
@@ -162,15 +153,15 @@ namespace AspNetCore.DataProtection.Aws.Tests
             var optionsObject = new KmsXmlEncryptorConfig();
             ((IConfigureOptions<KmsXmlEncryptorConfig>)configureObject).Configure(optionsObject);
 
-            provider.Setup(x => x.GetService(typeof(ILoggerFactory))).Returns(loggerFactory.Object);
-            provider.Setup(x => x.GetService(typeof(IOptions<KmsXmlEncryptorConfig>))).Returns(snapshot.Object);
-            provider.Setup(x => x.GetService(typeof(IOptions<DataProtectionOptions>))).Returns(dpSnapshot.Object);
-            loggerFactory.Setup(x => x.CreateLogger(typeof(KmsXmlEncryptor).FullName)).Returns(repository.Create<ILogger<KmsXmlEncryptor>>().Object);
-            snapshot.Setup(x => x.Value).Returns(optionsObject);
+            A.CallTo(() => provider.GetService(typeof(ILoggerFactory))).Returns(loggerFactory);
+            A.CallTo(() => provider.GetService(typeof(IOptions<KmsXmlEncryptorConfig>))).Returns(snapshot);
+            A.CallTo(() => provider.GetService(typeof(IOptions<DataProtectionOptions>))).Returns(dpSnapshot);
+            A.CallTo(() => loggerFactory.CreateLogger(typeof(KmsXmlEncryptor).FullName)).Returns(A.Fake<ILogger<KmsXmlEncryptor>>());
+            A.CallTo(() => snapshot.Value).Returns(optionsObject);
             var dbOptions = new DataProtectionOptions();
-            dpSnapshot.Setup(x => x.Value).Returns(dbOptions);
+            A.CallTo(() => dpSnapshot.Value).Returns(dbOptions);
 
-            var configure = services.First(x => x.ServiceType == typeof(IConfigureOptions<KeyManagementOptions>)).ImplementationFactory(provider.Object);
+            var configure = services.First(x => x.ServiceType == typeof(IConfigureOptions<KeyManagementOptions>)).ImplementationFactory(provider);
             var options = new KeyManagementOptions();
             ((IConfigureOptions<KeyManagementOptions>)configure).Configure(options);
             Assert.IsType<KmsXmlEncryptor>(options.XmlEncryptor);
@@ -186,38 +177,38 @@ namespace AspNetCore.DataProtection.Aws.Tests
         public void ExpectFailureOnNullBuilderWithClient()
         {
             Assert.Throws<ArgumentNullException>(() => DataProtectionBuilderExtensions.ProtectKeysWithAwsKms(null,
-                                                                                                             repository.Create<IAmazonKeyManagementService>().Object,
+                                                                                                             A.Fake<IAmazonKeyManagementService>(),
                                                                                                              new KmsXmlEncryptorConfig("keyId")));
         }
 
         [Fact]
         public void ExpectFailureOnNullClient()
         {
-            Assert.Throws<ArgumentNullException>(() => builder.Object.ProtectKeysWithAwsKms(null, new KmsXmlEncryptorConfig("keyId")));
+            Assert.Throws<ArgumentNullException>(() => builder.ProtectKeysWithAwsKms(null, new KmsXmlEncryptorConfig("keyId")));
         }
 
         [Fact]
         public void ExpectFailureOnNullConfig()
         {
-            Assert.Throws<ArgumentNullException>(() => builder.Object.ProtectKeysWithAwsKms(null as IConfiguration));
+            Assert.Throws<ArgumentNullException>(() => builder.ProtectKeysWithAwsKms(null as IConfiguration));
         }
 
         [Fact]
         public void ExpectFailureOnNullConfigWithClient()
         {
-            Assert.Throws<ArgumentNullException>(() => builder.Object.ProtectKeysWithAwsKms(repository.Create<IAmazonKeyManagementService>().Object, null as IConfiguration));
+            Assert.Throws<ArgumentNullException>(() => builder.ProtectKeysWithAwsKms(A.Fake<IAmazonKeyManagementService>(), null as IConfiguration));
         }
 
         [Fact]
         public void ExpectFailureOnNullConfigObject()
         {
-            Assert.Throws<ArgumentNullException>(() => builder.Object.ProtectKeysWithAwsKms(null as IKmsXmlEncryptorConfig));
+            Assert.Throws<ArgumentNullException>(() => builder.ProtectKeysWithAwsKms(null as IKmsXmlEncryptorConfig));
         }
 
         [Fact]
         public void ExpectFailureOnNullConfigObjectWithClient()
         {
-            Assert.Throws<ArgumentNullException>(() => builder.Object.ProtectKeysWithAwsKms(repository.Create<IAmazonKeyManagementService>().Object,
+            Assert.Throws<ArgumentNullException>(() => builder.ProtectKeysWithAwsKms(A.Fake<IAmazonKeyManagementService>(),
                                                                                             null as IKmsXmlEncryptorConfig));
         }
     }

@@ -5,7 +5,7 @@ using AspNetCore.DataProtection.Aws.S3;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Moq;
+using FakeItEasy;
 using Xunit;
 
 namespace AspNetCore.DataProtection.Aws.IntegrationTests
@@ -18,7 +18,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
         public S3ConfigurationTests(ConfigurationFixture fixture)
         {
             this.fixture = fixture;
-            s3Client = new Mock<IAmazonS3>().Object;
+            s3Client = A.Fake<IAmazonS3>();
         }
 
         [Fact]

@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.DataProtection.XmlEncryption;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Moq;
+using FakeItEasy;
 using Xunit;
 
 namespace AspNetCore.DataProtection.Aws.IntegrationTests
@@ -21,7 +21,7 @@ namespace AspNetCore.DataProtection.Aws.IntegrationTests
         public KmsConfigurationTests(ConfigurationFixture fixture)
         {
             this.fixture = fixture;
-            kmsClient = new Mock<IAmazonKeyManagementService>().Object;
+            kmsClient = A.Fake<IAmazonKeyManagementService>();
         }
 
         [Fact]

@@ -31,7 +31,6 @@
     <PackageReference Include="GitHubActionsTestLogger" Version="3.0.4" />
 
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageReference Include="Moq" Version="4.20.*" />
 
     <PackageReference Include="Nito.AsyncEx.Coordination" Version="1.0.2" />
     <PackageReference Include="Testcontainers.LocalStack" Version="4.11.0" />

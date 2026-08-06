@@ -1,4 +1,4 @@
-﻿// Copyright(c) 2018 Jeff Hotchkiss, Modifications 2023 Chris McKee
+// Copyright(c) 2018 Jeff Hotchkiss, Modifications 2023 Chris McKee
 // Licensed under the MIT License. See License.md in the project root for license information.
 using System;
 using System.Collections.Generic;
@@ -13,18 +13,17 @@ using Amazon.S3.Model;
 using AspNetCore.DataProtection.Aws.S3;
 using AspNetCore.DataProtection.Aws.S3.Internals;
 using Microsoft.Extensions.Options;
-using Moq;
+using FakeItEasy;
 using Xunit;
 
 namespace AspNetCore.DataProtection.Aws.Tests
 {
-    public sealed class S3XmlRespositoryTests : IDisposable
+    public sealed class S3XmlRespositoryTests
     {
         private readonly S3XmlRepository xmlRepository;
-        private readonly MockRepository repository;
-        private readonly Mock<IAmazonS3> s3Client;
-        private readonly Mock<IOptions<S3XmlRepositoryConfig>> config;
-        private readonly Mock<IMockingWrapper> mockingWrapper;
+        private readonly IAmazonS3 s3Client;
+        private readonly IOptions<S3XmlRepositoryConfig> config;
+        private readonly IMockingWrapper mockingWrapper;
         private const string ElementName = "name";
         private const string ElementContent = "test";
         private const string Bucket = "bucket";
@@ -42,25 +41,19 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
         public S3XmlRespositoryTests()
         {
-            repository = new MockRepository(MockBehavior.Strict);
-            s3Client = repository.Create<IAmazonS3>();
-            config = repository.Create<IOptions<S3XmlRepositoryConfig>>();
-            mockingWrapper = repository.Create<IMockingWrapper>();
-            xmlRepository = new S3XmlRepository(s3Client.Object, config.Object, null, mockingWrapper.Object);
-        }
-
-        public void Dispose()
-        {
-            repository.VerifyAll();
+            s3Client = A.Fake<IAmazonS3>(o => o.Strict());
+            config = A.Fake<IOptions<S3XmlRepositoryConfig>>(o => o.Strict());
+            mockingWrapper = A.Fake<IMockingWrapper>(o => o.Strict());
+            xmlRepository = new S3XmlRepository(s3Client, config, null, mockingWrapper);
         }
 
         [Fact]
         public void ExpectAlternativeConstructor()
         {
             var configObject = new S3XmlRepositoryConfig { Bucket = Bucket };
-            config.Setup(x => x.Value).Returns(configObject);
+            A.CallTo(() => config.Value).Returns(configObject);
 
-            var altRepo = new S3XmlRepository(s3Client.Object, config.Object);
+            var altRepo = new S3XmlRepository(s3Client, config);
 
             Assert.Same(configObject, altRepo.Config);
         }
@@ -69,9 +62,9 @@ namespace AspNetCore.DataProtection.Aws.Tests
         public void ExpectValidationOfConfigToThrow()
         {
             var configObject = new S3XmlRepositoryConfig();
-            config.Setup(x => x.Value).Returns(configObject);
+            A.CallTo(() => config.Value).Returns(configObject);
 
-            var altRepo = new S3XmlRepository(s3Client.Object, config.Object);
+            var altRepo = new S3XmlRepository(s3Client, config);
 
             Assert.Throws<ArgumentException>(() => altRepo.ValidateConfig());
         }
@@ -87,46 +80,46 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
             var configObject = new S3XmlRepositoryConfig { Bucket = Bucket, KeyPrefix = Prefix, ClientSideCompression = false };
 
-            config.Setup(x => x.Value).Returns(configObject);
+            A.CallTo(() => config.Value).Returns(configObject);
 
             var guid = new Guid("03ffb238-1f6b-4647-963a-5ed60e83c74e");
-            mockingWrapper.Setup(x => x.GetNewGuid()).Returns(guid);
+            A.CallTo(() => mockingWrapper.GetNewGuid()).Returns(guid);
 
             GetObjectMetadataResponse headResponse = null;
-            s3Client.Setup(x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), CancellationToken.None))
-                    .ReturnsAsync(response)
-                    .Callback<PutObjectRequest, CancellationToken>((pr, ct) =>
-                                                                   {
-                                                                       Assert.Equal(Bucket, pr.BucketName);
-                                                                       Assert.Equal(ServerSideEncryptionMethod.AES256, pr.ServerSideEncryptionMethod);
-                                                                       Assert.Equal(ServerSideEncryptionCustomerMethod.None, pr.ServerSideEncryptionCustomerMethod);
-                                                                       Assert.Null(pr.ServerSideEncryptionCustomerProvidedKey);
-                                                                       Assert.Null(pr.ServerSideEncryptionCustomerProvidedKeyMD5);
-                                                                       Assert.Null(pr.ServerSideEncryptionKeyManagementServiceKeyId);
-                                                                       Assert.Equal(S3StorageClass.Standard, pr.StorageClass);
-                                                                       Assert.Equal(Prefix + guid + ".xml", pr.Key);
-                                                                       Assert.Contains(S3XmlRepository.FriendlyNameActualMetadataHeader, pr.Metadata.Keys);
-                                                                       Assert.Equal(myTestName, pr.Metadata[S3XmlRepository.FriendlyNameActualMetadataHeader]);
-                                                                       Assert.Contains(S3XmlRepository.Md5ActualMetadataHeader, pr.Metadata.Keys);
-                                                                       var metadataHeader = pr.Metadata[S3XmlRepository.Md5ActualMetadataHeader];
-                                                                       headResponse = new GetObjectMetadataResponse();
-                                                                       headResponse.Metadata[S3XmlRepository.Md5ActualMetadataHeader] = metadataHeader;
-                                                                       Assert.Equal(Convert.FromBase64String(pr.MD5Digest), StringToByteArray(metadataHeader));
+            A.CallTo(() => s3Client.PutObjectAsync(A<PutObjectRequest>._, CancellationToken.None))
+             .Invokes((PutObjectRequest pr, CancellationToken ct) =>
+                                                            {
+                                                                Assert.Equal(Bucket, pr.BucketName);
+                                                                Assert.Equal(ServerSideEncryptionMethod.AES256, pr.ServerSideEncryptionMethod);
+                                                                Assert.Equal(ServerSideEncryptionCustomerMethod.None, pr.ServerSideEncryptionCustomerMethod);
+                                                                Assert.Null(pr.ServerSideEncryptionCustomerProvidedKey);
+                                                                Assert.Null(pr.ServerSideEncryptionCustomerProvidedKeyMD5);
+                                                                Assert.Null(pr.ServerSideEncryptionKeyManagementServiceKeyId);
+                                                                Assert.Equal(S3StorageClass.Standard, pr.StorageClass);
+                                                                Assert.Equal(Prefix + guid + ".xml", pr.Key);
+                                                                Assert.Contains(S3XmlRepository.FriendlyNameActualMetadataHeader, pr.Metadata.Keys);
+                                                                Assert.Equal(myTestName, pr.Metadata[S3XmlRepository.FriendlyNameActualMetadataHeader]);
+                                                                Assert.Contains(S3XmlRepository.Md5ActualMetadataHeader, pr.Metadata.Keys);
+                                                                var metadataHeader = pr.Metadata[S3XmlRepository.Md5ActualMetadataHeader];
+                                                                headResponse = new GetObjectMetadataResponse();
+                                                                headResponse.Metadata[S3XmlRepository.Md5ActualMetadataHeader] = metadataHeader;
+                                                                Assert.Equal(Convert.FromBase64String(pr.MD5Digest), StringToByteArray(metadataHeader));
 
-                                                                       var body = XElement.Load(pr.InputStream);
-                                                                       Assert.True(XNode.DeepEquals(myXml, body));
-                                                                   });
+                                                                var body = XElement.Load(pr.InputStream);
+                                                                Assert.True(XNode.DeepEquals(myXml, body));
+                                                            })
+             .Returns(response);
 
-            s3Client.Setup(x => x.GetObjectMetadataAsync(It.IsAny<GetObjectMetadataRequest>(), CancellationToken.None))
-                    .ReturnsAsync(() => headResponse)
-                    .Callback<GetObjectMetadataRequest, CancellationToken>((pr, ct) =>
-                                                                           {
-                                                                               Assert.Equal(Bucket, pr.BucketName);
-                                                                               Assert.Equal(ServerSideEncryptionCustomerMethod.None, pr.ServerSideEncryptionCustomerMethod);
-                                                                               Assert.Null(pr.ServerSideEncryptionCustomerProvidedKey);
-                                                                               Assert.Null(pr.ServerSideEncryptionCustomerProvidedKeyMD5);
-                                                                               Assert.Equal(Prefix + guid + ".xml", pr.Key);
-                                                                           });
+            A.CallTo(() => s3Client.GetObjectMetadataAsync(A<GetObjectMetadataRequest>._, CancellationToken.None))
+             .Invokes((GetObjectMetadataRequest pr, CancellationToken ct) =>
+                                                                    {
+                                                                        Assert.Equal(Bucket, pr.BucketName);
+                                                                        Assert.Equal(ServerSideEncryptionCustomerMethod.None, pr.ServerSideEncryptionCustomerMethod);
+                                                                        Assert.Null(pr.ServerSideEncryptionCustomerProvidedKey);
+                                                                        Assert.Null(pr.ServerSideEncryptionCustomerProvidedKeyMD5);
+                                                                        Assert.Equal(Prefix + guid + ".xml", pr.Key);
+                                                                    })
+             .ReturnsLazily(() => headResponse);
 
             xmlRepository.StoreElement(myXml, myTestName);
         }
@@ -142,43 +135,43 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
             var configObject = new S3XmlRepositoryConfig { Bucket = Bucket, KeyPrefix = Prefix, ClientSideCompression = false };
 
-            config.Setup(x => x.Value).Returns(configObject);
+            A.CallTo(() => config.Value).Returns(configObject);
 
             var guid = new Guid("03ffb238-1f6b-4647-963a-5ed60e83c74e");
-            mockingWrapper.Setup(x => x.GetNewGuid()).Returns(guid);
+            A.CallTo(() => mockingWrapper.GetNewGuid()).Returns(guid);
 
-            s3Client.Setup(x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), CancellationToken.None))
-                    .ReturnsAsync(response)
-                    .Callback<PutObjectRequest, CancellationToken>((pr, ct) =>
-                                                                   {
-                                                                       Assert.Equal(Bucket, pr.BucketName);
-                                                                       Assert.Equal(ServerSideEncryptionMethod.AES256, pr.ServerSideEncryptionMethod);
-                                                                       Assert.Equal(ServerSideEncryptionCustomerMethod.None, pr.ServerSideEncryptionCustomerMethod);
-                                                                       Assert.Null(pr.ServerSideEncryptionCustomerProvidedKey);
-                                                                       Assert.Null(pr.ServerSideEncryptionCustomerProvidedKeyMD5);
-                                                                       Assert.Null(pr.ServerSideEncryptionKeyManagementServiceKeyId);
-                                                                       Assert.Equal(S3StorageClass.Standard, pr.StorageClass);
-                                                                       Assert.Equal(Prefix + guid + ".xml", pr.Key);
-                                                                       Assert.Contains(S3XmlRepository.FriendlyNameActualMetadataHeader, pr.Metadata.Keys);
-                                                                       Assert.Equal(myTestName, pr.Metadata[S3XmlRepository.FriendlyNameActualMetadataHeader]);
-                                                                       Assert.Contains(S3XmlRepository.Md5ActualMetadataHeader, pr.Metadata.Keys);
-                                                                       var metadataHeader = pr.Metadata[S3XmlRepository.Md5ActualMetadataHeader];
-                                                                       Assert.Equal(Convert.FromBase64String(pr.MD5Digest), StringToByteArray(metadataHeader));
+            A.CallTo(() => s3Client.PutObjectAsync(A<PutObjectRequest>._, CancellationToken.None))
+             .Invokes((PutObjectRequest pr, CancellationToken ct) =>
+                                                            {
+                                                                Assert.Equal(Bucket, pr.BucketName);
+                                                                Assert.Equal(ServerSideEncryptionMethod.AES256, pr.ServerSideEncryptionMethod);
+                                                                Assert.Equal(ServerSideEncryptionCustomerMethod.None, pr.ServerSideEncryptionCustomerMethod);
+                                                                Assert.Null(pr.ServerSideEncryptionCustomerProvidedKey);
+                                                                Assert.Null(pr.ServerSideEncryptionCustomerProvidedKeyMD5);
+                                                                Assert.Null(pr.ServerSideEncryptionKeyManagementServiceKeyId);
+                                                                Assert.Equal(S3StorageClass.Standard, pr.StorageClass);
+                                                                Assert.Equal(Prefix + guid + ".xml", pr.Key);
+                                                                Assert.Contains(S3XmlRepository.FriendlyNameActualMetadataHeader, pr.Metadata.Keys);
+                                                                Assert.Equal(myTestName, pr.Metadata[S3XmlRepository.FriendlyNameActualMetadataHeader]);
+                                                                Assert.Contains(S3XmlRepository.Md5ActualMetadataHeader, pr.Metadata.Keys);
+                                                                var metadataHeader = pr.Metadata[S3XmlRepository.Md5ActualMetadataHeader];
+                                                                Assert.Equal(Convert.FromBase64String(pr.MD5Digest), StringToByteArray(metadataHeader));
 
-                                                                       var body = XElement.Load(pr.InputStream);
-                                                                       Assert.True(XNode.DeepEquals(myXml, body));
-                                                                   });
+                                                                var body = XElement.Load(pr.InputStream);
+                                                                Assert.True(XNode.DeepEquals(myXml, body));
+                                                            })
+             .Returns(response);
 
-            s3Client.Setup(x => x.GetObjectMetadataAsync(It.IsAny<GetObjectMetadataRequest>(), CancellationToken.None))
-                    .ReturnsAsync(new GetObjectMetadataResponse())
-                    .Callback<GetObjectMetadataRequest, CancellationToken>((pr, ct) =>
-                                                                           {
-                                                                               Assert.Equal(Bucket, pr.BucketName);
-                                                                               Assert.Equal(ServerSideEncryptionCustomerMethod.None, pr.ServerSideEncryptionCustomerMethod);
-                                                                               Assert.Null(pr.ServerSideEncryptionCustomerProvidedKey);
-                                                                               Assert.Null(pr.ServerSideEncryptionCustomerProvidedKeyMD5);
-                                                                               Assert.Equal(Prefix + guid + ".xml", pr.Key);
-                                                                           });
+            A.CallTo(() => s3Client.GetObjectMetadataAsync(A<GetObjectMetadataRequest>._, CancellationToken.None))
+             .Invokes((GetObjectMetadataRequest pr, CancellationToken ct) =>
+                                                                    {
+                                                                        Assert.Equal(Bucket, pr.BucketName);
+                                                                        Assert.Equal(ServerSideEncryptionCustomerMethod.None, pr.ServerSideEncryptionCustomerMethod);
+                                                                        Assert.Null(pr.ServerSideEncryptionCustomerProvidedKey);
+                                                                        Assert.Null(pr.ServerSideEncryptionCustomerProvidedKeyMD5);
+                                                                        Assert.Equal(Prefix + guid + ".xml", pr.Key);
+                                                                    })
+             .Returns(new GetObjectMetadataResponse());
 
             Assert.Throws<AggregateException>(() => xmlRepository.StoreElement(myXml, myTestName));
         }
@@ -202,46 +195,46 @@ namespace AspNetCore.DataProtection.Aws.Tests
                 ClientSideCompression = false
             };
 
-            config.Setup(x => x.Value).Returns(configObject);
+            A.CallTo(() => config.Value).Returns(configObject);
 
             var guid = new Guid("03ffb238-1f6b-4647-963a-5ed60e83c74e");
-            mockingWrapper.Setup(x => x.GetNewGuid()).Returns(guid);
+            A.CallTo(() => mockingWrapper.GetNewGuid()).Returns(guid);
 
             GetObjectMetadataResponse headResponse = null;
-            s3Client.Setup(x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), CancellationToken.None))
-                    .ReturnsAsync(response)
-                    .Callback<PutObjectRequest, CancellationToken>((pr, ct) =>
-                                                                   {
-                                                                       Assert.Equal(Bucket, pr.BucketName);
-                                                                       Assert.Equal(ServerSideEncryptionMethod.AWSKMS, pr.ServerSideEncryptionMethod);
-                                                                       Assert.Equal(ServerSideEncryptionCustomerMethod.None, pr.ServerSideEncryptionCustomerMethod);
-                                                                       Assert.Null(pr.ServerSideEncryptionCustomerProvidedKey);
-                                                                       Assert.Null(pr.ServerSideEncryptionCustomerProvidedKeyMD5);
-                                                                       Assert.Equal(keyId, pr.ServerSideEncryptionKeyManagementServiceKeyId);
-                                                                       Assert.Equal(S3StorageClass.Standard, pr.StorageClass);
-                                                                       Assert.Equal(Prefix + guid + ".xml", pr.Key);
-                                                                       Assert.Contains(S3XmlRepository.FriendlyNameActualMetadataHeader, pr.Metadata.Keys);
-                                                                       Assert.Equal(myTestName, pr.Metadata[S3XmlRepository.FriendlyNameActualMetadataHeader]);
-                                                                       Assert.Contains(S3XmlRepository.Md5ActualMetadataHeader, pr.Metadata.Keys);
-                                                                       var metadataHeader = pr.Metadata[S3XmlRepository.Md5ActualMetadataHeader];
-                                                                       headResponse = new GetObjectMetadataResponse();
-                                                                       headResponse.Metadata[S3XmlRepository.Md5ActualMetadataHeader] = metadataHeader;
-                                                                       Assert.Equal(Convert.FromBase64String(pr.MD5Digest), StringToByteArray(metadataHeader));
+            A.CallTo(() => s3Client.PutObjectAsync(A<PutObjectRequest>._, CancellationToken.None))
+             .Invokes((PutObjectRequest pr, CancellationToken ct) =>
+                                                            {
+                                                                Assert.Equal(Bucket, pr.BucketName);
+                                                                Assert.Equal(ServerSideEncryptionMethod.AWSKMS, pr.ServerSideEncryptionMethod);
+                                                                Assert.Equal(ServerSideEncryptionCustomerMethod.None, pr.ServerSideEncryptionCustomerMethod);
+                                                                Assert.Null(pr.ServerSideEncryptionCustomerProvidedKey);
+                                                                Assert.Null(pr.ServerSideEncryptionCustomerProvidedKeyMD5);
+                                                                Assert.Equal(keyId, pr.ServerSideEncryptionKeyManagementServiceKeyId);
+                                                                Assert.Equal(S3StorageClass.Standard, pr.StorageClass);
+                                                                Assert.Equal(Prefix + guid + ".xml", pr.Key);
+                                                                Assert.Contains(S3XmlRepository.FriendlyNameActualMetadataHeader, pr.Metadata.Keys);
+                                                                Assert.Equal(myTestName, pr.Metadata[S3XmlRepository.FriendlyNameActualMetadataHeader]);
+                                                                Assert.Contains(S3XmlRepository.Md5ActualMetadataHeader, pr.Metadata.Keys);
+                                                                var metadataHeader = pr.Metadata[S3XmlRepository.Md5ActualMetadataHeader];
+                                                                headResponse = new GetObjectMetadataResponse();
+                                                                headResponse.Metadata[S3XmlRepository.Md5ActualMetadataHeader] = metadataHeader;
+                                                                Assert.Equal(Convert.FromBase64String(pr.MD5Digest), StringToByteArray(metadataHeader));
 
-                                                                       var body = XElement.Load(pr.InputStream);
-                                                                       Assert.True(XNode.DeepEquals(myXml, body));
-                                                                   });
+                                                                var body = XElement.Load(pr.InputStream);
+                                                                Assert.True(XNode.DeepEquals(myXml, body));
+                                                            })
+             .Returns(response);
 
-            s3Client.Setup(x => x.GetObjectMetadataAsync(It.IsAny<GetObjectMetadataRequest>(), CancellationToken.None))
-                    .ReturnsAsync(() => headResponse)
-                    .Callback<GetObjectMetadataRequest, CancellationToken>((pr, ct) =>
-                                                                           {
-                                                                               Assert.Equal(Bucket, pr.BucketName);
-                                                                               Assert.Equal(ServerSideEncryptionCustomerMethod.None, pr.ServerSideEncryptionCustomerMethod);
-                                                                               Assert.Null(pr.ServerSideEncryptionCustomerProvidedKey);
-                                                                               Assert.Null(pr.ServerSideEncryptionCustomerProvidedKeyMD5);
-                                                                               Assert.Equal(Prefix + guid + ".xml", pr.Key);
-                                                                           });
+            A.CallTo(() => s3Client.GetObjectMetadataAsync(A<GetObjectMetadataRequest>._, CancellationToken.None))
+             .Invokes((GetObjectMetadataRequest pr, CancellationToken ct) =>
+                                                                    {
+                                                                        Assert.Equal(Bucket, pr.BucketName);
+                                                                        Assert.Equal(ServerSideEncryptionCustomerMethod.None, pr.ServerSideEncryptionCustomerMethod);
+                                                                        Assert.Null(pr.ServerSideEncryptionCustomerProvidedKey);
+                                                                        Assert.Null(pr.ServerSideEncryptionCustomerProvidedKeyMD5);
+                                                                        Assert.Equal(Prefix + guid + ".xml", pr.Key);
+                                                                    })
+             .ReturnsLazily(() => headResponse);
 
             xmlRepository.StoreElement(myXml, myTestName);
         }
@@ -267,46 +260,46 @@ namespace AspNetCore.DataProtection.Aws.Tests
                 ClientSideCompression = false
             };
 
-            config.Setup(x => x.Value).Returns(configObject);
+            A.CallTo(() => config.Value).Returns(configObject);
 
             var guid = new Guid("03ffb238-1f6b-4647-963a-5ed60e83c74e");
-            mockingWrapper.Setup(x => x.GetNewGuid()).Returns(guid);
+            A.CallTo(() => mockingWrapper.GetNewGuid()).Returns(guid);
 
             GetObjectMetadataResponse headResponse = null;
-            s3Client.Setup(x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), CancellationToken.None))
-                    .ReturnsAsync(response)
-                    .Callback<PutObjectRequest, CancellationToken>((pr, ct) =>
-                                                                   {
-                                                                       Assert.Equal(Bucket, pr.BucketName);
-                                                                       Assert.Equal(ServerSideEncryptionMethod.None, pr.ServerSideEncryptionMethod);
-                                                                       Assert.Equal(ServerSideEncryptionCustomerMethod.AES256, pr.ServerSideEncryptionCustomerMethod);
-                                                                       Assert.Equal(AesKey, pr.ServerSideEncryptionCustomerProvidedKey);
-                                                                       Assert.Equal(md5, pr.ServerSideEncryptionCustomerProvidedKeyMD5);
-                                                                       Assert.Null(pr.ServerSideEncryptionKeyManagementServiceKeyId);
-                                                                       Assert.Equal(S3StorageClass.Standard, pr.StorageClass);
-                                                                       Assert.Equal(Prefix + guid + ".xml", pr.Key);
-                                                                       Assert.Contains(S3XmlRepository.FriendlyNameActualMetadataHeader, pr.Metadata.Keys);
-                                                                       Assert.Equal(myTestName, pr.Metadata[S3XmlRepository.FriendlyNameActualMetadataHeader]);
-                                                                       Assert.Contains(S3XmlRepository.Md5ActualMetadataHeader, pr.Metadata.Keys);
-                                                                       var metadataHeader = pr.Metadata[S3XmlRepository.Md5ActualMetadataHeader];
-                                                                       headResponse = new GetObjectMetadataResponse();
-                                                                       headResponse.Metadata[S3XmlRepository.Md5ActualMetadataHeader] = metadataHeader;
-                                                                       Assert.Equal(Convert.FromBase64String(pr.MD5Digest), StringToByteArray(metadataHeader));
+            A.CallTo(() => s3Client.PutObjectAsync(A<PutObjectRequest>._, CancellationToken.None))
+             .Invokes((PutObjectRequest pr, CancellationToken ct) =>
+                                                            {
+                                                                Assert.Equal(Bucket, pr.BucketName);
+                                                                Assert.Equal(ServerSideEncryptionMethod.None, pr.ServerSideEncryptionMethod);
+                                                                Assert.Equal(ServerSideEncryptionCustomerMethod.AES256, pr.ServerSideEncryptionCustomerMethod);
+                                                                Assert.Equal(AesKey, pr.ServerSideEncryptionCustomerProvidedKey);
+                                                                Assert.Equal(md5, pr.ServerSideEncryptionCustomerProvidedKeyMD5);
+                                                                Assert.Null(pr.ServerSideEncryptionKeyManagementServiceKeyId);
+                                                                Assert.Equal(S3StorageClass.Standard, pr.StorageClass);
+                                                                Assert.Equal(Prefix + guid + ".xml", pr.Key);
+                                                                Assert.Contains(S3XmlRepository.FriendlyNameActualMetadataHeader, pr.Metadata.Keys);
+                                                                Assert.Equal(myTestName, pr.Metadata[S3XmlRepository.FriendlyNameActualMetadataHeader]);
+                                                                Assert.Contains(S3XmlRepository.Md5ActualMetadataHeader, pr.Metadata.Keys);
+                                                                var metadataHeader = pr.Metadata[S3XmlRepository.Md5ActualMetadataHeader];
+                                                                headResponse = new GetObjectMetadataResponse();
+                                                                headResponse.Metadata[S3XmlRepository.Md5ActualMetadataHeader] = metadataHeader;
+                                                                Assert.Equal(Convert.FromBase64String(pr.MD5Digest), StringToByteArray(metadataHeader));
 
-                                                                       var body = XElement.Load(pr.InputStream);
-                                                                       Assert.True(XNode.DeepEquals(myXml, body));
-                                                                   });
+                                                                var body = XElement.Load(pr.InputStream);
+                                                                Assert.True(XNode.DeepEquals(myXml, body));
+                                                            })
+             .Returns(response);
 
-            s3Client.Setup(x => x.GetObjectMetadataAsync(It.IsAny<GetObjectMetadataRequest>(), CancellationToken.None))
-                    .ReturnsAsync(() => headResponse)
-                    .Callback<GetObjectMetadataRequest, CancellationToken>((pr, ct) =>
-                                                                           {
-                                                                               Assert.Equal(Bucket, pr.BucketName);
-                                                                               Assert.Equal(ServerSideEncryptionCustomerMethod.AES256, pr.ServerSideEncryptionCustomerMethod);
-                                                                               Assert.Equal(AesKey, pr.ServerSideEncryptionCustomerProvidedKey);
-                                                                               Assert.Equal(md5, pr.ServerSideEncryptionCustomerProvidedKeyMD5);
-                                                                               Assert.Equal(Prefix + guid + ".xml", pr.Key);
-                                                                           });
+            A.CallTo(() => s3Client.GetObjectMetadataAsync(A<GetObjectMetadataRequest>._, CancellationToken.None))
+             .Invokes((GetObjectMetadataRequest pr, CancellationToken ct) =>
+                                                                    {
+                                                                        Assert.Equal(Bucket, pr.BucketName);
+                                                                        Assert.Equal(ServerSideEncryptionCustomerMethod.AES256, pr.ServerSideEncryptionCustomerMethod);
+                                                                        Assert.Equal(AesKey, pr.ServerSideEncryptionCustomerProvidedKey);
+                                                                        Assert.Equal(md5, pr.ServerSideEncryptionCustomerProvidedKeyMD5);
+                                                                        Assert.Equal(Prefix + guid + ".xml", pr.Key);
+                                                                    })
+             .ReturnsLazily(() => headResponse);
 
             xmlRepository.StoreElement(myXml, myTestName);
         }
@@ -322,46 +315,46 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
             var configObject = new S3XmlRepositoryConfig { Bucket = Bucket, KeyPrefix = Prefix, StorageClass = S3StorageClass.ReducedRedundancy, ClientSideCompression = false };
 
-            config.Setup(x => x.Value).Returns(configObject);
+            A.CallTo(() => config.Value).Returns(configObject);
 
             var guid = new Guid("03ffb238-1f6b-4647-963a-5ed60e83c74e");
-            mockingWrapper.Setup(x => x.GetNewGuid()).Returns(guid);
+            A.CallTo(() => mockingWrapper.GetNewGuid()).Returns(guid);
 
             GetObjectMetadataResponse headResponse = null;
-            s3Client.Setup(x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), CancellationToken.None))
-                    .ReturnsAsync(response)
-                    .Callback<PutObjectRequest, CancellationToken>((pr, ct) =>
-                                                                   {
-                                                                       Assert.Equal(Bucket, pr.BucketName);
-                                                                       Assert.Equal(ServerSideEncryptionMethod.AES256, pr.ServerSideEncryptionMethod);
-                                                                       Assert.Equal(ServerSideEncryptionCustomerMethod.None, pr.ServerSideEncryptionCustomerMethod);
-                                                                       Assert.Null(pr.ServerSideEncryptionCustomerProvidedKey);
-                                                                       Assert.Null(pr.ServerSideEncryptionCustomerProvidedKeyMD5);
-                                                                       Assert.Null(pr.ServerSideEncryptionKeyManagementServiceKeyId);
-                                                                       Assert.Equal(S3StorageClass.ReducedRedundancy, pr.StorageClass);
-                                                                       Assert.Equal(Prefix + guid + ".xml", pr.Key);
-                                                                       Assert.Contains(S3XmlRepository.FriendlyNameActualMetadataHeader, pr.Metadata.Keys);
-                                                                       Assert.Equal(myTestName, pr.Metadata[S3XmlRepository.FriendlyNameActualMetadataHeader]);
-                                                                       Assert.Contains(S3XmlRepository.Md5ActualMetadataHeader, pr.Metadata.Keys);
-                                                                       var metadataHeader = pr.Metadata[S3XmlRepository.Md5ActualMetadataHeader];
-                                                                       headResponse = new GetObjectMetadataResponse();
-                                                                       headResponse.Metadata[S3XmlRepository.Md5ActualMetadataHeader] = metadataHeader;
-                                                                       Assert.Equal(Convert.FromBase64String(pr.MD5Digest), StringToByteArray(metadataHeader));
+            A.CallTo(() => s3Client.PutObjectAsync(A<PutObjectRequest>._, CancellationToken.None))
+             .Invokes((PutObjectRequest pr, CancellationToken ct) =>
+                                                            {
+                                                                Assert.Equal(Bucket, pr.BucketName);
+                                                                Assert.Equal(ServerSideEncryptionMethod.AES256, pr.ServerSideEncryptionMethod);
+                                                                Assert.Equal(ServerSideEncryptionCustomerMethod.None, pr.ServerSideEncryptionCustomerMethod);
+                                                                Assert.Null(pr.ServerSideEncryptionCustomerProvidedKey);
+                                                                Assert.Null(pr.ServerSideEncryptionCustomerProvidedKeyMD5);
+                                                                Assert.Null(pr.ServerSideEncryptionKeyManagementServiceKeyId);
+                                                                Assert.Equal(S3StorageClass.ReducedRedundancy, pr.StorageClass);
+                                                                Assert.Equal(Prefix + guid + ".xml", pr.Key);
+                                                                Assert.Contains(S3XmlRepository.FriendlyNameActualMetadataHeader, pr.Metadata.Keys);
+                                                                Assert.Equal(myTestName, pr.Metadata[S3XmlRepository.FriendlyNameActualMetadataHeader]);
+                                                                Assert.Contains(S3XmlRepository.Md5ActualMetadataHeader, pr.Metadata.Keys);
+                                                                var metadataHeader = pr.Metadata[S3XmlRepository.Md5ActualMetadataHeader];
+                                                                headResponse = new GetObjectMetadataResponse();
+                                                                headResponse.Metadata[S3XmlRepository.Md5ActualMetadataHeader] = metadataHeader;
+                                                                Assert.Equal(Convert.FromBase64String(pr.MD5Digest), StringToByteArray(metadataHeader));
 
-                                                                       var body = XElement.Load(pr.InputStream);
-                                                                       Assert.True(XNode.DeepEquals(myXml, body));
-                                                                   });
+                                                                var body = XElement.Load(pr.InputStream);
+                                                                Assert.True(XNode.DeepEquals(myXml, body));
+                                                            })
+             .Returns(response);
 
-            s3Client.Setup(x => x.GetObjectMetadataAsync(It.IsAny<GetObjectMetadataRequest>(), CancellationToken.None))
-                    .ReturnsAsync(() => headResponse)
-                    .Callback<GetObjectMetadataRequest, CancellationToken>((pr, ct) =>
-                                                                           {
-                                                                               Assert.Equal(Bucket, pr.BucketName);
-                                                                               Assert.Equal(ServerSideEncryptionCustomerMethod.None, pr.ServerSideEncryptionCustomerMethod);
-                                                                               Assert.Null(pr.ServerSideEncryptionCustomerProvidedKey);
-                                                                               Assert.Null(pr.ServerSideEncryptionCustomerProvidedKeyMD5);
-                                                                               Assert.Equal(Prefix + guid + ".xml", pr.Key);
-                                                                           });
+            A.CallTo(() => s3Client.GetObjectMetadataAsync(A<GetObjectMetadataRequest>._, CancellationToken.None))
+             .Invokes((GetObjectMetadataRequest pr, CancellationToken ct) =>
+                                                                    {
+                                                                        Assert.Equal(Bucket, pr.BucketName);
+                                                                        Assert.Equal(ServerSideEncryptionCustomerMethod.None, pr.ServerSideEncryptionCustomerMethod);
+                                                                        Assert.Null(pr.ServerSideEncryptionCustomerProvidedKey);
+                                                                        Assert.Null(pr.ServerSideEncryptionCustomerProvidedKeyMD5);
+                                                                        Assert.Equal(Prefix + guid + ".xml", pr.Key);
+                                                                    })
+             .ReturnsLazily(() => headResponse);
 
             xmlRepository.StoreElement(myXml, myTestName);
         }
@@ -377,47 +370,47 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
             var configObject = new S3XmlRepositoryConfig { Bucket = Bucket, KeyPrefix = Prefix };
 
-            config.Setup(x => x.Value).Returns(configObject);
+            A.CallTo(() => config.Value).Returns(configObject);
 
             var guid = new Guid("03ffb238-1f6b-4647-963a-5ed60e83c74e");
-            mockingWrapper.Setup(x => x.GetNewGuid()).Returns(guid);
+            A.CallTo(() => mockingWrapper.GetNewGuid()).Returns(guid);
 
             GetObjectMetadataResponse headResponse = null;
-            s3Client.Setup(x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), CancellationToken.None))
-                    .ReturnsAsync(response)
-                    .Callback<PutObjectRequest, CancellationToken>((pr, ct) =>
-                                                                   {
-                                                                       Assert.Equal(Bucket, pr.BucketName);
-                                                                       Assert.Equal(ServerSideEncryptionMethod.AES256, pr.ServerSideEncryptionMethod);
-                                                                       Assert.Equal(ServerSideEncryptionCustomerMethod.None, pr.ServerSideEncryptionCustomerMethod);
-                                                                       Assert.Null(pr.ServerSideEncryptionCustomerProvidedKey);
-                                                                       Assert.Null(pr.ServerSideEncryptionCustomerProvidedKeyMD5);
-                                                                       Assert.Null(pr.ServerSideEncryptionKeyManagementServiceKeyId);
-                                                                       Assert.Equal(S3StorageClass.Standard, pr.StorageClass);
-                                                                       Assert.Equal(Prefix + guid + ".xml", pr.Key);
-                                                                       Assert.Equal("gzip", pr.Headers.ContentEncoding);
-                                                                       Assert.Contains(S3XmlRepository.FriendlyNameActualMetadataHeader, pr.Metadata.Keys);
-                                                                       Assert.Equal(myTestName, pr.Metadata[S3XmlRepository.FriendlyNameActualMetadataHeader]);
-                                                                       Assert.Contains(S3XmlRepository.Md5ActualMetadataHeader, pr.Metadata.Keys);
-                                                                       var metadataHeader = pr.Metadata[S3XmlRepository.Md5ActualMetadataHeader];
-                                                                       headResponse = new GetObjectMetadataResponse();
-                                                                       headResponse.Metadata[S3XmlRepository.Md5ActualMetadataHeader] = metadataHeader;
-                                                                       Assert.Equal(Convert.FromBase64String(pr.MD5Digest), StringToByteArray(metadataHeader));
+            A.CallTo(() => s3Client.PutObjectAsync(A<PutObjectRequest>._, CancellationToken.None))
+             .Invokes((PutObjectRequest pr, CancellationToken ct) =>
+                                                            {
+                                                                Assert.Equal(Bucket, pr.BucketName);
+                                                                Assert.Equal(ServerSideEncryptionMethod.AES256, pr.ServerSideEncryptionMethod);
+                                                                Assert.Equal(ServerSideEncryptionCustomerMethod.None, pr.ServerSideEncryptionCustomerMethod);
+                                                                Assert.Null(pr.ServerSideEncryptionCustomerProvidedKey);
+                                                                Assert.Null(pr.ServerSideEncryptionCustomerProvidedKeyMD5);
+                                                                Assert.Null(pr.ServerSideEncryptionKeyManagementServiceKeyId);
+                                                                Assert.Equal(S3StorageClass.Standard, pr.StorageClass);
+                                                                Assert.Equal(Prefix + guid + ".xml", pr.Key);
+                                                                Assert.Equal("gzip", pr.Headers.ContentEncoding);
+                                                                Assert.Contains(S3XmlRepository.FriendlyNameActualMetadataHeader, pr.Metadata.Keys);
+                                                                Assert.Equal(myTestName, pr.Metadata[S3XmlRepository.FriendlyNameActualMetadataHeader]);
+                                                                Assert.Contains(S3XmlRepository.Md5ActualMetadataHeader, pr.Metadata.Keys);
+                                                                var metadataHeader = pr.Metadata[S3XmlRepository.Md5ActualMetadataHeader];
+                                                                headResponse = new GetObjectMetadataResponse();
+                                                                headResponse.Metadata[S3XmlRepository.Md5ActualMetadataHeader] = metadataHeader;
+                                                                Assert.Equal(Convert.FromBase64String(pr.MD5Digest), StringToByteArray(metadataHeader));
 
-                                                                       var body = XElement.Load(new GZipStream(pr.InputStream, CompressionMode.Decompress));
-                                                                       Assert.True(XNode.DeepEquals(myXml, body));
-                                                                   });
+                                                                var body = XElement.Load(new GZipStream(pr.InputStream, CompressionMode.Decompress));
+                                                                Assert.True(XNode.DeepEquals(myXml, body));
+                                                            })
+             .Returns(response);
 
-            s3Client.Setup(x => x.GetObjectMetadataAsync(It.IsAny<GetObjectMetadataRequest>(), CancellationToken.None))
-                    .ReturnsAsync(() => headResponse)
-                    .Callback<GetObjectMetadataRequest, CancellationToken>((pr, ct) =>
-                                                                           {
-                                                                               Assert.Equal(Bucket, pr.BucketName);
-                                                                               Assert.Equal(ServerSideEncryptionCustomerMethod.None, pr.ServerSideEncryptionCustomerMethod);
-                                                                               Assert.Null(pr.ServerSideEncryptionCustomerProvidedKey);
-                                                                               Assert.Null(pr.ServerSideEncryptionCustomerProvidedKeyMD5);
-                                                                               Assert.Equal(Prefix + guid + ".xml", pr.Key);
-                                                                           });
+            A.CallTo(() => s3Client.GetObjectMetadataAsync(A<GetObjectMetadataRequest>._, CancellationToken.None))
+             .Invokes((GetObjectMetadataRequest pr, CancellationToken ct) =>
+                                                                    {
+                                                                        Assert.Equal(Bucket, pr.BucketName);
+                                                                        Assert.Equal(ServerSideEncryptionCustomerMethod.None, pr.ServerSideEncryptionCustomerMethod);
+                                                                        Assert.Null(pr.ServerSideEncryptionCustomerProvidedKey);
+                                                                        Assert.Null(pr.ServerSideEncryptionCustomerProvidedKeyMD5);
+                                                                        Assert.Equal(Prefix + guid + ".xml", pr.Key);
+                                                                    })
+             .ReturnsLazily(() => headResponse);
 
             xmlRepository.StoreElement(myXml, myTestName);
         }
@@ -425,25 +418,25 @@ namespace AspNetCore.DataProtection.Aws.Tests
         [Fact]
         public void ExpectEmptyQueryToSucceed()
         {
-            var listResponse = new ListObjectsV2Response 
-            { 
-                Name = Bucket, 
+            var listResponse = new ListObjectsV2Response
+            {
+                Name = Bucket,
                 Prefix = Prefix,
                 S3Objects = new List<S3Object>() // Initialize empty list to avoid null reference
             };
 
             var configObject = new S3XmlRepositoryConfig { Bucket = Bucket, KeyPrefix = Prefix };
 
-            config.Setup(x => x.Value).Returns(configObject);
+            A.CallTo(() => config.Value).Returns(configObject);
 
-            s3Client.Setup(x => x.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), CancellationToken.None))
-                    .ReturnsAsync(listResponse)
-                    .Callback<ListObjectsV2Request, CancellationToken>((lr, ct) =>
-                                                                       {
-                                                                           Assert.Equal(Bucket, lr.BucketName);
-                                                                           Assert.Equal(Prefix, lr.Prefix);
-                                                                           Assert.Null(lr.ContinuationToken);
-                                                                       });
+            A.CallTo(() => s3Client.ListObjectsV2Async(A<ListObjectsV2Request>._, CancellationToken.None))
+             .Invokes((ListObjectsV2Request lr, CancellationToken ct) =>
+                                                                {
+                                                                    Assert.Equal(Bucket, lr.BucketName);
+                                                                    Assert.Equal(Prefix, lr.Prefix);
+                                                                    Assert.Null(lr.ContinuationToken);
+                                                                })
+             .Returns(listResponse);
 
             IReadOnlyCollection<XElement> list = xmlRepository.GetAllElements();
 
@@ -478,7 +471,7 @@ namespace AspNetCore.DataProtection.Aws.Tests
                 myXml.Save(tempStream);
                 tempStream.Seek(0, SeekOrigin.Begin);
                 var actualMd5 = CalculateMd5(tempStream);
-                
+
                 var etagToUse = etag == "\"51df532e0190642dfbf0e15105fd7827\"" ? $"\"{actualMd5}\"" : etag;
                 var listResponse = new ListObjectsV2Response
                 {
@@ -490,16 +483,16 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
                 var configObject = new S3XmlRepositoryConfig { Bucket = Bucket, KeyPrefix = Prefix, ValidateETag = validateETag, ValidateMd5Metadata = validateMetadata };
 
-                config.Setup(x => x.Value).Returns(configObject);
+                A.CallTo(() => config.Value).Returns(configObject);
 
-                s3Client.Setup(x => x.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), CancellationToken.None))
-                        .ReturnsAsync(listResponse)
-                        .Callback<ListObjectsV2Request, CancellationToken>((lr, ct) =>
-                                                                       {
-                                                                           Assert.Equal(Bucket, lr.BucketName);
-                                                                           Assert.Equal(Prefix, lr.Prefix);
-                                                                           Assert.Null(lr.ContinuationToken);
-                                                                       });
+                A.CallTo(() => s3Client.ListObjectsV2Async(A<ListObjectsV2Request>._, CancellationToken.None))
+                 .Invokes((ListObjectsV2Request lr, CancellationToken ct) =>
+                                                                {
+                                                                    Assert.Equal(Bucket, lr.BucketName);
+                                                                    Assert.Equal(Prefix, lr.Prefix);
+                                                                    Assert.Null(lr.ContinuationToken);
+                                                                })
+                 .Returns(listResponse);
             }
 
             using(var returnedStream = new MemoryStream())
@@ -522,16 +515,16 @@ namespace AspNetCore.DataProtection.Aws.Tests
                     getResponse.Metadata.Add(S3XmlRepository.Md5Metadata, md5ToUse);
                 }
 
-                s3Client.Setup(x => x.GetObjectAsync(It.IsAny<GetObjectRequest>(), CancellationToken.None))
-                        .ReturnsAsync(getResponse)
-                        .Callback<GetObjectRequest, CancellationToken>((gr, ct) =>
-                                                                       {
-                                                                           Assert.Equal(Bucket, gr.BucketName);
-                                                                           Assert.Equal(key, gr.Key);
-                                                                           Assert.Equal(ServerSideEncryptionCustomerMethod.None, gr.ServerSideEncryptionCustomerMethod);
-                                                                           Assert.Null(gr.ServerSideEncryptionCustomerProvidedKey);
-                                                                           Assert.Null(gr.ServerSideEncryptionCustomerProvidedKeyMD5);
-                                                                       });
+                A.CallTo(() => s3Client.GetObjectAsync(A<GetObjectRequest>._, CancellationToken.None))
+                 .Invokes((GetObjectRequest gr, CancellationToken ct) =>
+                                                                {
+                                                                    Assert.Equal(Bucket, gr.BucketName);
+                                                                    Assert.Equal(key, gr.Key);
+                                                                    Assert.Equal(ServerSideEncryptionCustomerMethod.None, gr.ServerSideEncryptionCustomerMethod);
+                                                                    Assert.Null(gr.ServerSideEncryptionCustomerProvidedKey);
+                                                                    Assert.Null(gr.ServerSideEncryptionCustomerProvidedKeyMD5);
+                                                                })
+                 .Returns(getResponse);
 
                 IReadOnlyCollection<XElement> list = xmlRepository.GetAllElements();
 
@@ -565,16 +558,16 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
             var configObject = new S3XmlRepositoryConfig { Bucket = Bucket, KeyPrefix = Prefix, ValidateETag = validateETag, ValidateMd5Metadata = validateMetadata };
 
-            config.Setup(x => x.Value).Returns(configObject);
+            A.CallTo(() => config.Value).Returns(configObject);
 
-            s3Client.Setup(x => x.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), CancellationToken.None))
-                    .ReturnsAsync(listResponse)
-                    .Callback<ListObjectsV2Request, CancellationToken>((lr, ct) =>
-                                                                       {
-                                                                           Assert.Equal(Bucket, lr.BucketName);
-                                                                           Assert.Equal(Prefix, lr.Prefix);
-                                                                           Assert.Null(lr.ContinuationToken);
-                                                                       });
+            A.CallTo(() => s3Client.ListObjectsV2Async(A<ListObjectsV2Request>._, CancellationToken.None))
+             .Invokes((ListObjectsV2Request lr, CancellationToken ct) =>
+                                                                {
+                                                                    Assert.Equal(Bucket, lr.BucketName);
+                                                                    Assert.Equal(Prefix, lr.Prefix);
+                                                                    Assert.Null(lr.ContinuationToken);
+                                                                })
+             .Returns(listResponse);
 
             using(var returnedStream = new MemoryStream())
             {
@@ -595,16 +588,16 @@ namespace AspNetCore.DataProtection.Aws.Tests
                     getResponse.Metadata.Add(S3XmlRepository.Md5Metadata, md5Header);
                 }
 
-                s3Client.Setup(x => x.GetObjectAsync(It.IsAny<GetObjectRequest>(), CancellationToken.None))
-                        .ReturnsAsync(getResponse)
-                        .Callback<GetObjectRequest, CancellationToken>((gr, ct) =>
-                                                                       {
-                                                                           Assert.Equal(Bucket, gr.BucketName);
-                                                                           Assert.Equal(key, gr.Key);
-                                                                           Assert.Equal(ServerSideEncryptionCustomerMethod.None, gr.ServerSideEncryptionCustomerMethod);
-                                                                           Assert.Null(gr.ServerSideEncryptionCustomerProvidedKey);
-                                                                           Assert.Null(gr.ServerSideEncryptionCustomerProvidedKeyMD5);
-                                                                       });
+                A.CallTo(() => s3Client.GetObjectAsync(A<GetObjectRequest>._, CancellationToken.None))
+                 .Invokes((GetObjectRequest gr, CancellationToken ct) =>
+                                                                {
+                                                                    Assert.Equal(Bucket, gr.BucketName);
+                                                                    Assert.Equal(key, gr.Key);
+                                                                    Assert.Equal(ServerSideEncryptionCustomerMethod.None, gr.ServerSideEncryptionCustomerMethod);
+                                                                    Assert.Null(gr.ServerSideEncryptionCustomerProvidedKey);
+                                                                    Assert.Null(gr.ServerSideEncryptionCustomerProvidedKeyMD5);
+                                                                })
+                 .Returns(getResponse);
 
                 Assert.Throws<AggregateException>(() => xmlRepository.GetAllElements());
             }
@@ -626,16 +619,16 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
             var configObject = new S3XmlRepositoryConfig { Bucket = Bucket, KeyPrefix = Prefix };
 
-            config.Setup(x => x.Value).Returns(configObject);
+            A.CallTo(() => config.Value).Returns(configObject);
 
-            s3Client.Setup(x => x.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), CancellationToken.None))
-                    .ReturnsAsync(listResponse)
-                    .Callback<ListObjectsV2Request, CancellationToken>((lr, ct) =>
-                                                                       {
-                                                                           Assert.Equal(Bucket, lr.BucketName);
-                                                                           Assert.Equal(Prefix, lr.Prefix);
-                                                                           Assert.Null(lr.ContinuationToken);
-                                                                       });
+            A.CallTo(() => s3Client.ListObjectsV2Async(A<ListObjectsV2Request>._, CancellationToken.None))
+             .Invokes((ListObjectsV2Request lr, CancellationToken ct) =>
+                                                                {
+                                                                    Assert.Equal(Bucket, lr.BucketName);
+                                                                    Assert.Equal(Prefix, lr.Prefix);
+                                                                    Assert.Null(lr.ContinuationToken);
+                                                                })
+             .Returns(listResponse);
 
             using(var returnedStream = new MemoryStream())
             {
@@ -644,16 +637,16 @@ namespace AspNetCore.DataProtection.Aws.Tests
                 returnedStream.Seek(0, SeekOrigin.Begin);
 
                 var getResponse = new GetObjectResponse { BucketName = Bucket, ETag = etag, Key = key, ResponseStream = returnedStream };
-                s3Client.Setup(x => x.GetObjectAsync(It.IsAny<GetObjectRequest>(), CancellationToken.None))
-                        .ReturnsAsync(getResponse)
-                        .Callback<GetObjectRequest, CancellationToken>((gr, ct) =>
-                                                                       {
-                                                                           Assert.Equal(Bucket, gr.BucketName);
-                                                                           Assert.Equal(key, gr.Key);
-                                                                           Assert.Equal(ServerSideEncryptionCustomerMethod.None, gr.ServerSideEncryptionCustomerMethod);
-                                                                           Assert.Null(gr.ServerSideEncryptionCustomerProvidedKey);
-                                                                           Assert.Null(gr.ServerSideEncryptionCustomerProvidedKeyMD5);
-                                                                       });
+                A.CallTo(() => s3Client.GetObjectAsync(A<GetObjectRequest>._, CancellationToken.None))
+                 .Invokes((GetObjectRequest gr, CancellationToken ct) =>
+                                                                {
+                                                                    Assert.Equal(Bucket, gr.BucketName);
+                                                                    Assert.Equal(key, gr.Key);
+                                                                    Assert.Equal(ServerSideEncryptionCustomerMethod.None, gr.ServerSideEncryptionCustomerMethod);
+                                                                    Assert.Null(gr.ServerSideEncryptionCustomerProvidedKey);
+                                                                    Assert.Null(gr.ServerSideEncryptionCustomerProvidedKeyMD5);
+                                                                })
+                 .Returns(getResponse);
 
                 IReadOnlyCollection<XElement> list = xmlRepository.GetAllElements();
 
@@ -677,16 +670,16 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
             var configObject = new S3XmlRepositoryConfig { Bucket = Bucket, KeyPrefix = Prefix };
 
-            config.Setup(x => x.Value).Returns(configObject);
+            A.CallTo(() => config.Value).Returns(configObject);
 
-            s3Client.Setup(x => x.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), CancellationToken.None))
-                    .ReturnsAsync(listResponse)
-                    .Callback<ListObjectsV2Request, CancellationToken>((lr, ct) =>
-                                                                       {
-                                                                           Assert.Equal(Bucket, lr.BucketName);
-                                                                           Assert.Equal(Prefix, lr.Prefix);
-                                                                           Assert.Null(lr.ContinuationToken);
-                                                                       });
+            A.CallTo(() => s3Client.ListObjectsV2Async(A<ListObjectsV2Request>._, CancellationToken.None))
+             .Invokes((ListObjectsV2Request lr, CancellationToken ct) =>
+                                                                {
+                                                                    Assert.Equal(Bucket, lr.BucketName);
+                                                                    Assert.Equal(Prefix, lr.Prefix);
+                                                                    Assert.Null(lr.ContinuationToken);
+                                                                })
+             .Returns(listResponse);
 
             using(var returnedStream = new MemoryStream())
             {
@@ -696,16 +689,16 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
                 var getResponse = new GetObjectResponse { BucketName = Bucket, ETag = etag, Key = key, ResponseStream = returnedStream };
                 // No Content-Encoding specified
-                s3Client.Setup(x => x.GetObjectAsync(It.IsAny<GetObjectRequest>(), CancellationToken.None))
-                        .ReturnsAsync(getResponse)
-                        .Callback<GetObjectRequest, CancellationToken>((gr, ct) =>
-                                                                       {
-                                                                           Assert.Equal(Bucket, gr.BucketName);
-                                                                           Assert.Equal(key, gr.Key);
-                                                                           Assert.Equal(ServerSideEncryptionCustomerMethod.None, gr.ServerSideEncryptionCustomerMethod);
-                                                                           Assert.Null(gr.ServerSideEncryptionCustomerProvidedKey);
-                                                                           Assert.Null(gr.ServerSideEncryptionCustomerProvidedKeyMD5);
-                                                                       });
+                A.CallTo(() => s3Client.GetObjectAsync(A<GetObjectRequest>._, CancellationToken.None))
+                 .Invokes((GetObjectRequest gr, CancellationToken ct) =>
+                                                                {
+                                                                    Assert.Equal(Bucket, gr.BucketName);
+                                                                    Assert.Equal(key, gr.Key);
+                                                                    Assert.Equal(ServerSideEncryptionCustomerMethod.None, gr.ServerSideEncryptionCustomerMethod);
+                                                                    Assert.Null(gr.ServerSideEncryptionCustomerProvidedKey);
+                                                                    Assert.Null(gr.ServerSideEncryptionCustomerProvidedKeyMD5);
+                                                                })
+                 .Returns(getResponse);
 
                 IReadOnlyCollection<XElement> list = xmlRepository.GetAllElements();
 
@@ -731,16 +724,16 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
             var configObject = new S3XmlRepositoryConfig { Bucket = Bucket, KeyPrefix = Prefix };
 
-            config.Setup(x => x.Value).Returns(configObject);
+            A.CallTo(() => config.Value).Returns(configObject);
 
-            s3Client.Setup(x => x.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), CancellationToken.None))
-                    .ReturnsAsync(listResponse)
-                    .Callback<ListObjectsV2Request, CancellationToken>((lr, ct) =>
-                                                                       {
-                                                                           Assert.Equal(Bucket, lr.BucketName);
-                                                                           Assert.Equal(Prefix, lr.Prefix);
-                                                                           Assert.Null(lr.ContinuationToken);
-                                                                       });
+            A.CallTo(() => s3Client.ListObjectsV2Async(A<ListObjectsV2Request>._, CancellationToken.None))
+             .Invokes((ListObjectsV2Request lr, CancellationToken ct) =>
+                                                                {
+                                                                    Assert.Equal(Bucket, lr.BucketName);
+                                                                    Assert.Equal(Prefix, lr.Prefix);
+                                                                    Assert.Null(lr.ContinuationToken);
+                                                                })
+             .Returns(listResponse);
 
             using(var returnedStream = new MemoryStream())
             {
@@ -760,16 +753,16 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
                 var getResponse = new GetObjectResponse { BucketName = Bucket, ETag = etag, Key = key, ResponseStream = returnedStream };
                 getResponse.Headers.ContentEncoding = "gzip";
-                s3Client.Setup(x => x.GetObjectAsync(It.IsAny<GetObjectRequest>(), CancellationToken.None))
-                        .ReturnsAsync(getResponse)
-                        .Callback<GetObjectRequest, CancellationToken>((gr, ct) =>
-                                                                       {
-                                                                           Assert.Equal(Bucket, gr.BucketName);
-                                                                           Assert.Equal(key, gr.Key);
-                                                                           Assert.Equal(ServerSideEncryptionCustomerMethod.None, gr.ServerSideEncryptionCustomerMethod);
-                                                                           Assert.Null(gr.ServerSideEncryptionCustomerProvidedKey);
-                                                                           Assert.Null(gr.ServerSideEncryptionCustomerProvidedKeyMD5);
-                                                                       });
+                A.CallTo(() => s3Client.GetObjectAsync(A<GetObjectRequest>._, CancellationToken.None))
+                 .Invokes((GetObjectRequest gr, CancellationToken ct) =>
+                                                                {
+                                                                    Assert.Equal(Bucket, gr.BucketName);
+                                                                    Assert.Equal(key, gr.Key);
+                                                                    Assert.Equal(ServerSideEncryptionCustomerMethod.None, gr.ServerSideEncryptionCustomerMethod);
+                                                                    Assert.Null(gr.ServerSideEncryptionCustomerProvidedKey);
+                                                                    Assert.Null(gr.ServerSideEncryptionCustomerProvidedKeyMD5);
+                                                                })
+                 .Returns(getResponse);
 
                 IReadOnlyCollection<XElement> list = xmlRepository.GetAllElements();
 
@@ -803,16 +796,16 @@ namespace AspNetCore.DataProtection.Aws.Tests
                 ServerSideEncryptionCustomerProvidedKeyMd5 = md5
             };
 
-            config.Setup(x => x.Value).Returns(configObject);
+            A.CallTo(() => config.Value).Returns(configObject);
 
-            s3Client.Setup(x => x.ListObjectsV2Async(It.IsAny<ListObjectsV2Request>(), CancellationToken.None))
-                    .ReturnsAsync(listResponse)
-                    .Callback<ListObjectsV2Request, CancellationToken>((lr, ct) =>
-                                                                       {
-                                                                           Assert.Equal(Bucket, lr.BucketName);
-                                                                           Assert.Equal(Prefix, lr.Prefix);
-                                                                           Assert.Null(lr.ContinuationToken);
-                                                                       });
+            A.CallTo(() => s3Client.ListObjectsV2Async(A<ListObjectsV2Request>._, CancellationToken.None))
+             .Invokes((ListObjectsV2Request lr, CancellationToken ct) =>
+                                                                {
+                                                                    Assert.Equal(Bucket, lr.BucketName);
+                                                                    Assert.Equal(Prefix, lr.Prefix);
+                                                                    Assert.Null(lr.ContinuationToken);
+                                                                })
+             .Returns(listResponse);
 
             using(var returnedStream = new MemoryStream())
             {
@@ -821,16 +814,16 @@ namespace AspNetCore.DataProtection.Aws.Tests
                 returnedStream.Seek(0, SeekOrigin.Begin);
 
                 var getResponse = new GetObjectResponse { BucketName = Bucket, ETag = etag, Key = key, ResponseStream = returnedStream };
-                s3Client.Setup(x => x.GetObjectAsync(It.IsAny<GetObjectRequest>(), CancellationToken.None))
-                        .ReturnsAsync(getResponse)
-                        .Callback<GetObjectRequest, CancellationToken>((gr, ct) =>
-                                                                       {
-                                                                           Assert.Equal(Bucket, gr.BucketName);
-                                                                           Assert.Equal(key, gr.Key);
-                                                                           Assert.Equal(ServerSideEncryptionCustomerMethod.AES256, gr.ServerSideEncryptionCustomerMethod);
-                                                                           Assert.Equal(AesKey, gr.ServerSideEncryptionCustomerProvidedKey);
-                                                                           Assert.Equal(md5, gr.ServerSideEncryptionCustomerProvidedKeyMD5);
-                                                                       });
+                A.CallTo(() => s3Client.GetObjectAsync(A<GetObjectRequest>._, CancellationToken.None))
+                 .Invokes((GetObjectRequest gr, CancellationToken ct) =>
+                                                                {
+                                                                    Assert.Equal(Bucket, gr.BucketName);
+                                                                    Assert.Equal(key, gr.Key);
+                                                                    Assert.Equal(ServerSideEncryptionCustomerMethod.AES256, gr.ServerSideEncryptionCustomerMethod);
+                                                                    Assert.Equal(AesKey, gr.ServerSideEncryptionCustomerProvidedKey);
+                                                                    Assert.Equal(md5, gr.ServerSideEncryptionCustomerProvidedKeyMD5);
+                                                                })
+                 .Returns(getResponse);
 
                 IReadOnlyCollection<XElement> list = xmlRepository.GetAllElements();
 
@@ -867,23 +860,23 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
             var configObject = new S3XmlRepositoryConfig { Bucket = Bucket, KeyPrefix = Prefix };
 
-            config.Setup(x => x.Value).Returns(configObject);
+            A.CallTo(() => config.Value).Returns(configObject);
 
-            s3Client.Setup(x => x.ListObjectsV2Async(It.Is<ListObjectsV2Request>(lr => lr.ContinuationToken == null), CancellationToken.None))
-                    .ReturnsAsync(listResponse1)
-                    .Callback<ListObjectsV2Request, CancellationToken>((lr, ct) =>
-                                                                       {
-                                                                           Assert.Equal(Bucket, lr.BucketName);
-                                                                           Assert.Equal(Prefix, lr.Prefix);
-                                                                       });
-            s3Client.Setup(x => x.ListObjectsV2Async(It.Is<ListObjectsV2Request>(lr => lr.ContinuationToken != null), CancellationToken.None))
-                    .ReturnsAsync(listResponse2)
-                    .Callback<ListObjectsV2Request, CancellationToken>((lr, ct) =>
-                                                                       {
-                                                                           Assert.Equal(Bucket, lr.BucketName);
-                                                                           Assert.Equal(Prefix, lr.Prefix);
-                                                                           Assert.Equal(nextToken, lr.ContinuationToken);
-                                                                       });
+            A.CallTo(() => s3Client.ListObjectsV2Async(A<ListObjectsV2Request>.That.Matches(lr => lr.ContinuationToken == null), CancellationToken.None))
+             .Invokes((ListObjectsV2Request lr, CancellationToken ct) =>
+                                                                {
+                                                                    Assert.Equal(Bucket, lr.BucketName);
+                                                                    Assert.Equal(Prefix, lr.Prefix);
+                                                                })
+             .Returns(listResponse1);
+            A.CallTo(() => s3Client.ListObjectsV2Async(A<ListObjectsV2Request>.That.Matches(lr => lr.ContinuationToken != null), CancellationToken.None))
+             .Invokes((ListObjectsV2Request lr, CancellationToken ct) =>
+                                                                {
+                                                                    Assert.Equal(Bucket, lr.BucketName);
+                                                                    Assert.Equal(Prefix, lr.Prefix);
+                                                                    Assert.Equal(nextToken, lr.ContinuationToken);
+                                                                })
+             .Returns(listResponse2);
 
             using(var returnedStream1 = new MemoryStream())
             using(var returnedStream2 = new MemoryStream())
@@ -897,20 +890,20 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
                 var getResponse1 = new GetObjectResponse { BucketName = Bucket, ETag = etag1, Key = key1, ResponseStream = returnedStream1 };
                 var getResponse2 = new GetObjectResponse { BucketName = Bucket, ETag = etag2, Key = key2, ResponseStream = returnedStream2 };
-                s3Client.Setup(x => x.GetObjectAsync(It.Is<GetObjectRequest>(gr => gr.Key == key1), CancellationToken.None))
-                        .ReturnsAsync(getResponse1)
-                        .Callback<GetObjectRequest, CancellationToken>((gr, ct) =>
-                                                                       {
-                                                                           Assert.Equal(Bucket, gr.BucketName);
-                                                                           Assert.Equal(key1, gr.Key);
-                                                                       });
-                s3Client.Setup(x => x.GetObjectAsync(It.Is<GetObjectRequest>(gr => gr.Key == key2), CancellationToken.None))
-                        .ReturnsAsync(getResponse2)
-                        .Callback<GetObjectRequest, CancellationToken>((gr, ct) =>
-                                                                       {
-                                                                           Assert.Equal(Bucket, gr.BucketName);
-                                                                           Assert.Equal(key2, gr.Key);
-                                                                       });
+                A.CallTo(() => s3Client.GetObjectAsync(A<GetObjectRequest>.That.Matches(gr => gr.Key == key1), CancellationToken.None))
+                 .Invokes((GetObjectRequest gr, CancellationToken ct) =>
+                                                                {
+                                                                    Assert.Equal(Bucket, gr.BucketName);
+                                                                    Assert.Equal(key1, gr.Key);
+                                                                })
+                 .Returns(getResponse1);
+                A.CallTo(() => s3Client.GetObjectAsync(A<GetObjectRequest>.That.Matches(gr => gr.Key == key2), CancellationToken.None))
+                 .Invokes((GetObjectRequest gr, CancellationToken ct) =>
+                                                                {
+                                                                    Assert.Equal(Bucket, gr.BucketName);
+                                                                    Assert.Equal(key2, gr.Key);
+                                                                })
+                 .Returns(getResponse2);
 
                 IReadOnlyCollection<XElement> list = xmlRepository.GetAllElements();
 

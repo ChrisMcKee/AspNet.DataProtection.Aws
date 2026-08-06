@@ -1,4 +1,4 @@
-﻿// Copyright(c) 2018 Jeff Hotchkiss, Modifications 2023 Chris McKee
+// Copyright(c) 2018 Jeff Hotchkiss, Modifications 2023 Chris McKee
 // Licensed under the MIT License. See License.md in the project root for license information.
 using System;
 using System.Collections.Generic;
@@ -11,18 +11,17 @@ using Amazon.KeyManagementService.Model;
 using AspNetCore.DataProtection.Aws.Kms;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
-using Moq;
+using FakeItEasy;
 using Xunit;
 
 namespace AspNetCore.DataProtection.Aws.Tests
 {
-    public class KmsXmlEncryptorTests : IDisposable
+    public class KmsXmlEncryptorTests
     {
         private readonly KmsXmlEncryptor encryptor;
-        private readonly MockRepository repository;
-        private readonly Mock<IAmazonKeyManagementService> kmsClient;
-        private readonly Mock<IOptions<KmsXmlEncryptorConfig>> encryptConfig;
-        private readonly Mock<IOptions<DataProtectionOptions>> dpOptions;
+        private readonly IAmazonKeyManagementService kmsClient;
+        private readonly IOptions<KmsXmlEncryptorConfig> encryptConfig;
+        private readonly IOptions<DataProtectionOptions> dpOptions;
         private const string KeyId = "keyId";
         private const string ElementName = "name";
         private readonly Dictionary<string, string> encryptionContext = new Dictionary<string, string>();
@@ -30,26 +29,20 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
         public KmsXmlEncryptorTests()
         {
-            repository = new MockRepository(MockBehavior.Strict);
-            kmsClient = repository.Create<IAmazonKeyManagementService>();
-            encryptConfig = repository.Create<IOptions<KmsXmlEncryptorConfig>>();
-            dpOptions = repository.Create<IOptions<DataProtectionOptions>>();
+            kmsClient = A.Fake<IAmazonKeyManagementService>(o => o.Strict());
+            encryptConfig = A.Fake<IOptions<KmsXmlEncryptorConfig>>(o => o.Strict());
+            dpOptions = A.Fake<IOptions<DataProtectionOptions>>(o => o.Strict());
 
-            encryptor = new KmsXmlEncryptor(kmsClient.Object, encryptConfig.Object, dpOptions.Object);
-        }
-
-        public void Dispose()
-        {
-            repository.VerifyAll();
+            encryptor = new KmsXmlEncryptor(kmsClient, encryptConfig, dpOptions);
         }
 
         [Fact]
         public void ExpectValidationOfConfigToThrow()
         {
             var configObject = new KmsXmlEncryptorConfig();
-            encryptConfig.Setup(x => x.Value).Returns(configObject);
+            A.CallTo(() => encryptConfig.Value).Returns(configObject);
 
-            var altRepo = new KmsXmlEncryptor(kmsClient.Object, encryptConfig.Object, dpOptions.Object);
+            var altRepo = new KmsXmlEncryptor(kmsClient, encryptConfig, dpOptions);
 
             Assert.Throws<ArgumentException>(() => altRepo.ValidateConfig());
         }
@@ -85,28 +78,28 @@ namespace AspNetCore.DataProtection.Aws.Tests
 
                 var actualOptions = new DataProtectionOptions { ApplicationDiscriminator = appId };
 
-                encryptConfig.Setup(x => x.Value).Returns(actualConfig);
-                dpOptions.Setup(x => x.Value).Returns(actualOptions);
+                A.CallTo(() => encryptConfig.Value).Returns(actualConfig);
+                A.CallTo(() => dpOptions.Value).Returns(actualOptions);
 
-                kmsClient.Setup(x => x.EncryptAsync(It.IsAny<EncryptRequest>(), CancellationToken.None))
-                         .ReturnsAsync(encryptResponse)
-                         .Callback<EncryptRequest, CancellationToken>((er, ct) =>
-                                                                      {
-                                                                          if(appId != null && useAppId)
-                                                                          {
-                                                                              Assert.Contains(KmsConstants.ApplicationEncryptionContextKey, er.EncryptionContext.Keys);
-                                                                              Assert.Equal(expectedAppId, er.EncryptionContext[KmsConstants.ApplicationEncryptionContextKey]);
-                                                                          }
-                                                                          else
-                                                                          {
-                                                                              Assert.Same(encryptionContext, er.EncryptionContext);
-                                                                          }
+                A.CallTo(() => kmsClient.EncryptAsync(A<EncryptRequest>._, CancellationToken.None))
+                 .Invokes((EncryptRequest er, CancellationToken ct) =>
+                                                              {
+                                                                  if(appId != null && useAppId)
+                                                                  {
+                                                                      Assert.Contains(KmsConstants.ApplicationEncryptionContextKey, er.EncryptionContext.Keys);
+                                                                      Assert.Equal(expectedAppId, er.EncryptionContext[KmsConstants.ApplicationEncryptionContextKey]);
+                                                                  }
+                                                                  else
+                                                                  {
+                                                                      Assert.Same(encryptionContext, er.EncryptionContext);
+                                                                  }
 
-                                                                          Assert.Same(grantTokens, er.GrantTokens);
+                                                                  Assert.Same(grantTokens, er.GrantTokens);
 
-                                                                          var body = XElement.Load(er.Plaintext);
-                                                                          Assert.True(XNode.DeepEquals(myInputXml, body));
-                                                                      });
+                                                                  var body = XElement.Load(er.Plaintext);
+                                                                  Assert.True(XNode.DeepEquals(myInputXml, body));
+                                                              })
+                 .Returns(encryptResponse);
 
                 var encryptedXml = encryptor.Encrypt(myInputXml);
 
